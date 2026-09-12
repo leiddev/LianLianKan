@@ -1,7 +1,27 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+/**
+ * release 签名信息从 local.properties 读取（该文件已被 .gitignore 排除），
+ * 因此密钥与密码不会进入版本库。
+ *
+ * 缺失时 release 构建会退化为未签名，`assembleDebug` 与单测不受影响 ——
+ * 这让「没有密钥的人也能跑测试」与「有密钥的人能出正式包」两件事互不干扰。
+ */
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+val releaseStorePath: String? = keystoreProperties.getProperty("RELEASE_STORE_FILE")
+val hasReleaseSigning: Boolean =
+    !releaseStorePath.isNullOrBlank() && rootProject.file(releaseStorePath).exists()
 
 android {
     namespace = "com.ldxy.lianliankan"
@@ -19,10 +39,26 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(releaseStorePath!!)
+                storePassword = keystoreProperties.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = keystoreProperties.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = keystoreProperties.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             optimization {
+                // 保持关闭：R8 需要真机回归才能确认 keep 规则完整，
+                // 而本项目当前没有可用的设备/模拟器验证通道（见开发计划第 7 节）。
                 enable = false
+            }
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
             }
         }
     }
