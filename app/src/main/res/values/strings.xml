@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">LianLianKan</string>
+    <!-- SRS 2.1：单机、离线、中文产品 -->
+    <string name="app_name">连连看</string>
 </resources>
