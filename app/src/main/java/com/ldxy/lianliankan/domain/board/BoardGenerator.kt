@@ -20,10 +20,10 @@ import kotlin.random.Random
  */
 class BoardGenerator(
     private val random: Random = Random.Default,
-) {
+) : BoardFactory {
 
     /** 按配置生成一副新棋盘。 */
-    fun generate(config: LevelConfig): Board {
+    override fun generate(config: LevelConfig): Board {
         val bag = typeBag(config.tileCount, config.typeCount).shuffled(random)
 
         val tiles = ArrayList<Tile>(bag.size)
