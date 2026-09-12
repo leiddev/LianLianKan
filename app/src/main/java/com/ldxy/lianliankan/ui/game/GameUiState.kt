@@ -52,6 +52,14 @@ sealed interface GameEffect {
     data class ShowMessage(val message: GameMessage) : GameEffect
 
     /**
+     * 选中了一张牌（SRS FR-4.1）。
+     *
+     * 单独作为效果发出，是为了让界面能播放「选中」音效与振动（SRS FR-12.1）——
+     * 音效属于 Android 侧能力，领域层与 ViewModel 都不应感知。
+     */
+    data class Selected(val position: Position) : GameEffect
+
+    /**
      * 一次错误选中：两张牌需要抖动 + 红闪（SRS FR-4.4 / FR-4.5），并弹出 [message] 提示。
      *
      * [first] / [second] 是涉及的两张牌的位置，供 `BoardView` 定位高亮。

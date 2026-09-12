@@ -1,9 +1,14 @@
 package com.ldxy.lianliankan.ui.nav
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -14,6 +19,10 @@ import androidx.navigation.navArgument
 import com.ldxy.lianliankan.data.ProgressRepository
 import com.ldxy.lianliankan.data.SettingsRepository
 import com.ldxy.lianliankan.domain.config.LevelCatalog
+import com.ldxy.lianliankan.domain.model.Settings
+import com.ldxy.lianliankan.feedback.AndroidSoundPlayer
+import com.ldxy.lianliankan.feedback.AndroidVibratorPlayer
+import com.ldxy.lianliankan.feedback.FeedbackDispatcher
 import com.ldxy.lianliankan.ui.game.GameScreen
 import com.ldxy.lianliankan.ui.game.GameViewModel
 import com.ldxy.lianliankan.ui.level.LevelSelectScreen
@@ -50,6 +59,25 @@ fun AppNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
+    // 音效与振动反馈（SRS FR-12）。开关用 lambda 读取最新的设置值，
+    // 这样玩家在设置里关掉后立即生效，而不是用到构造时的快照（FR-11.6 / FR-12.3）。
+    val context = LocalContext.current
+    val settings by settingsRepository.settings
+        .collectAsStateWithLifecycle(initialValue = Settings())
+    val latestSettings by rememberUpdatedState(settings)
+
+    val feedback = remember(context) {
+        FeedbackDispatcher(
+            soundPlayer = AndroidSoundPlayer(context),
+            vibratorPlayer = AndroidVibratorPlayer(context),
+            soundEnabled = { latestSettings.soundEnabled },
+            vibrationEnabled = { latestSettings.vibrationEnabled },
+        )
+    }
+    DisposableEffect(feedback) {
+        onDispose { feedback.release() }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Route.MENU,
@@ -110,6 +138,7 @@ fun AppNavHost(
             GameScreen(
                 viewModel = viewModel,
                 progressRepository = progressRepository,
+                feedback = feedback,
                 onExitToMenu = { navController.popBackStack(Route.MENU, inclusive = false) },
                 onNextLevel = { next ->
                     navController.navigate(Route.game(next)) {

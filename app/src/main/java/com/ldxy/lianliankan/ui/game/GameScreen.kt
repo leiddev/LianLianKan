@@ -30,6 +30,8 @@ import com.ldxy.lianliankan.R
 import com.ldxy.lianliankan.data.ProgressRepository
 import com.ldxy.lianliankan.domain.config.LevelCatalog
 import com.ldxy.lianliankan.domain.model.GamePhase
+import com.ldxy.lianliankan.feedback.FeedbackDispatcher
+import com.ldxy.lianliankan.feedback.FeedbackEvent
 import com.ldxy.lianliankan.ui.dialog.PauseDialog
 import com.ldxy.lianliankan.ui.dialog.ResultDialog
 import kotlin.math.PI
@@ -56,6 +58,7 @@ import kotlinx.coroutines.launch
 fun GameScreen(
     viewModel: GameViewModel,
     progressRepository: ProgressRepository,
+    feedback: FeedbackDispatcher,
     onExitToMenu: () -> Unit,
     onNextLevel: (level: Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -87,9 +90,15 @@ fun GameScreen(
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is GameEffect.Eliminated -> elimination = effect
+                is GameEffect.Eliminated -> {
+                    feedback.dispatch(FeedbackEvent.ELIMINATE)
+                    elimination = effect
+                }
+
+                is GameEffect.Selected -> feedback.dispatch(FeedbackEvent.SELECT)
 
                 is GameEffect.Rejected -> {
+                    feedback.dispatch(FeedbackEvent.ERROR)
                     rejection = effect
                     // 另起协程弹提示：showSnackbar 会挂起到消失，不能阻塞事件收集
                     scope.launch {
@@ -101,6 +110,16 @@ fun GameScreen(
                     snackbarHostState.showSnackbar(latestMessages.getValue(effect.message))
                 }
             }
+        }
+    }
+
+    // 通关 / 失败的音效与振动（SRS FR-12.1）。以阶段变化为触发点，
+    // 避免与「消除」音效在同一次消除里重叠判断。
+    LaunchedEffect(state.phase) {
+        when (state.phase) {
+            GamePhase.WIN -> feedback.dispatch(FeedbackEvent.WIN)
+            GamePhase.LOSE -> feedback.dispatch(FeedbackEvent.LOSE)
+            GamePhase.READY, GamePhase.PLAYING, GamePhase.PAUSED -> Unit
         }
     }
 

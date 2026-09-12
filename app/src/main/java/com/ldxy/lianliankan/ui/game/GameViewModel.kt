@@ -103,7 +103,11 @@ class GameViewModel(
                 )
             }
 
-            SelectResult.Selected,
+            SelectResult.Selected -> {
+                publish()
+                _effects.tryEmit(GameEffect.Selected(position))
+            }
+
             SelectResult.Deselected,
             SelectResult.Ignored,
             -> publish()
