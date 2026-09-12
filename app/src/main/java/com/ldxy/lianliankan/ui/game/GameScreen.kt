@@ -27,6 +27,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ldxy.lianliankan.R
+import com.ldxy.lianliankan.data.ProgressRepository
+import com.ldxy.lianliankan.domain.config.LevelCatalog
+import com.ldxy.lianliankan.domain.model.GamePhase
+import com.ldxy.lianliankan.ui.dialog.PauseDialog
+import com.ldxy.lianliankan.ui.dialog.ResultDialog
 import kotlin.math.PI
 import kotlin.math.min
 import kotlin.math.sin
@@ -50,6 +55,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun GameScreen(
     viewModel: GameViewModel,
+    progressRepository: ProgressRepository,
+    onExitToMenu: () -> Unit,
+    onNextLevel: (level: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -200,6 +208,41 @@ fun GameScreen(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 88.dp),
         )
+    }
+
+    // 结算：通关时记录最佳分并解锁下一关（SRS FR-2.4 / FR-8.5 / FR-10.4）。
+    // 放在这里是合适的——只有本屏幕同时知道「哪一关」与「什么结果」。
+    val result = state.result
+    var isNewRecord by remember { mutableStateOf(false) }
+    LaunchedEffect(result) {
+        isNewRecord = if (result != null && result.isWin) {
+            progressRepository.recordCleared(state.config.level, result.score)
+        } else {
+            false
+        }
+    }
+
+    when (state.phase) {
+        // 暂停菜单（SRS FR-10.1）
+        GamePhase.PAUSED -> PauseDialog(
+            onResume = viewModel::onResumeClick,
+            onRestart = viewModel::onRestartClick,
+            onExit = onExitToMenu,
+        )
+
+        // 结算面板（SRS FR-10.2 – FR-10.6）
+        GamePhase.WIN, GamePhase.LOSE -> result?.let {
+            ResultDialog(
+                result = it,
+                hasNextLevel = state.config.level < LevelCatalog.levelCount,
+                isNewRecord = isNewRecord,
+                onNextLevel = { onNextLevel(state.config.level + 1) },
+                onRetry = viewModel::onRestartClick,
+                onExit = onExitToMenu,
+            )
+        }
+
+        GamePhase.READY, GamePhase.PLAYING -> Unit
     }
 }
 

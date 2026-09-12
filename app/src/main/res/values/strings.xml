@@ -2,7 +2,25 @@
     <!-- SRS 2.1：单机、离线、中文产品 -->
     <string name="app_name">连连看</string>
 
-    <!-- 游戏界面 HUD（SRS FR-7 / FR-8 / FR-10.4） -->
+    <!-- 主菜单（SRS FR-1） -->
+    <string name="menu_start">开始游戏</string>
+    <string name="menu_continue">继续游戏</string>
+    <string name="menu_level_select">关卡选择</string>
+    <string name="menu_settings">设置</string>
+    <string name="menu_exit">退出应用</string>
+
+    <!-- 关卡选择（SRS FR-2） -->
+    <string name="level_number">第 %1$d 关</string>
+    <string name="level_size">%1$d × %2$d</string>
+    <string name="level_best">最佳 %1$d 分</string>
+    <string name="level_locked">未解锁</string>
+
+    <!-- 通用动作 -->
+    <string name="action_back">返回</string>
+    <string name="action_confirm">确定</string>
+    <string name="action_cancel">取消</string>
+
+    <!-- 游戏界面 HUD（SRS FR-7 / FR-8） -->
     <string name="hud_time">时间</string>
     <string name="hud_score">得分</string>
     <string name="hud_combo">连击</string>
@@ -12,13 +30,35 @@
     <string name="action_shuffle">洗牌</string>
     <string name="action_pause">暂停</string>
 
+    <!-- 暂停与结算（SRS FR-10） -->
+    <string name="dialog_paused">已暂停</string>
+    <string name="action_resume">继续</string>
+    <string name="action_restart_level">重开本关</string>
+    <string name="action_back_to_menu">返回主菜单</string>
+    <string name="dialog_win">通关！</string>
+    <string name="dialog_lose">时间到</string>
+    <string name="result_score">本关得分</string>
+    <string name="result_max_combo">最高连击</string>
+    <string name="result_time_bonus">时间奖励</string>
+    <string name="result_new_record">刷新了本关最佳分</string>
+    <string name="result_all_cleared">全部通关</string>
+    <string name="action_next_level">下一关</string>
+    <string name="action_retry">重试本关</string>
+
+    <!-- 设置（SRS FR-11） -->
+    <string name="settings_sound">音效</string>
+    <string name="settings_vibration">振动</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_clear_progress">清除进度</string>
+    <string name="settings_clear_progress_confirm">将清空全部关卡解锁状态与最佳成绩，且无法恢复。确定继续吗？</string>
+
     <!-- 一次性提示（SRS 5.1） -->
     <string name="msg_wrong_type">图案不同，换一张试试</string>
     <string name="msg_no_path">这两张牌连不上</string>
     <string name="msg_no_hint_left">提示次数已用完</string>
     <string name="msg_no_shuffle_left">洗牌次数已用完</string>
     <string name="msg_auto_shuffled">已自动重排</string>
-
-    <!-- 无障碍描述（SRS FR-13.7 的可辨识性要求） -->
-    <string name="tile_content_description">第 %1$d 行第 %2$d 列</string>
 </resources>
