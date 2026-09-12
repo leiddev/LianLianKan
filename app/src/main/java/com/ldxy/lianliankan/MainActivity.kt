@@ -3,10 +3,10 @@ package com.ldxy.lianliankan
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -20,6 +20,7 @@ import com.ldxy.lianliankan.domain.model.Settings
 import com.ldxy.lianliankan.domain.model.ThemeMode
 import com.ldxy.lianliankan.ui.nav.AppNavHost
 import com.ldxy.lianliankan.ui.theme.LianLianKanTheme
+import com.ldxy.lianliankan.ui.theme.appBackgroundBrush
 
 /**
  * 应用唯一 Activity（SRS FR-1.4：锁定竖屏，见 AndroidManifest.xml）。
@@ -45,9 +46,10 @@ class MainActivity : ComponentActivity() {
                 .collectAsStateWithLifecycle(initialValue = Settings())
 
             LianLianKanTheme(darkTheme = settings.themeMode.resolveDarkTheme()) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(appBackgroundBrush()),
                 ) {
                     AppNavHost(
                         settingsRepository = settingsRepository,

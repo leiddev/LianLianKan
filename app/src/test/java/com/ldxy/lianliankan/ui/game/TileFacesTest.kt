@@ -42,4 +42,49 @@ class TileFacesTest {
         assertNotNull(TileFaces.faceFor(-1))
         assertNotNull(TileFaces.faceFor(Int.MIN_VALUE))
     }
+
+    // ============================================================ 皮肤结构（FR-11.4，P2）
+
+    @Test
+    fun `每套皮肤的图案数量都不少于关卡所需`() {
+        val maxTypeCount = LevelCatalog.levels.maxOf { it.typeCount }
+        for (skinId in 0 until TileFaces.skinCount) {
+            assertTrue(
+                "皮肤 $skinId 的图案数不足 $maxTypeCount",
+                TileFaces.facesFor(skinId).size >= maxTypeCount,
+            )
+        }
+    }
+
+    @Test
+    fun `不同皮肤的同一类型给出不同图案`() {
+        assertTrue("至少应有 2 套皮肤用于验证结构", TileFaces.skinCount >= 2)
+        for (type in 0 until TileFaces.size) {
+            assertTrue(
+                "皮肤 0 与皮肤 1 在类型 $type 上不应是同一图案，否则皮肤切换无效果",
+                TileFaces.faceFor(type, skinId = 0) != TileFaces.faceFor(type, skinId = 1),
+            )
+        }
+    }
+
+    @Test
+    fun `未注册的皮肤编号回退到默认皮肤`() {
+        val fallback = TileFaces.facesFor(TileFaces.DEFAULT_SKIN_ID)
+
+        assertEquals(fallback, TileFaces.facesFor(99))
+        assertEquals(fallback, TileFaces.facesFor(-1))
+        assertEquals(
+            TileFaces.faceFor(3, TileFaces.DEFAULT_SKIN_ID),
+            TileFaces.faceFor(3, skinId = 99),
+        )
+    }
+
+    @Test
+    fun `每套皮肤内部图案互不相同`() {
+        for (skinId in 0 until TileFaces.skinCount) {
+            val faces = TileFaces.facesFor(skinId)
+            assertEquals("皮肤 $skinId 内存在重复图案", faces.size, faces.toSet().size)
+            assertTrue("皮肤 $skinId 存在空图案", faces.none { it.isBlank() })
+        }
+    }
 }
