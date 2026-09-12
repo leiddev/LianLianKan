@@ -13,7 +13,7 @@ class LevelCatalogTest {
         intArrayOf(1, 6, 8, 48, 8, 180, 3, 3),
         intArrayOf(2, 6, 8, 48, 9, 180, 3, 3),
         intArrayOf(3, 8, 8, 64, 9, 180, 3, 3),
-        intArrayOf(4, 6, 10, 60, 10, 180, 3, 3),
+        intArrayOf(4, 8, 8, 64, 10, 180, 3, 3),
         intArrayOf(5, 8, 8, 64, 10, 175, 3, 3),
         intArrayOf(6, 8, 10, 80, 10, 170, 3, 3),
         intArrayOf(7, 8, 10, 80, 11, 165, 3, 3),
@@ -70,21 +70,37 @@ class LevelCatalogTest {
     }
 
     @Test
-    fun `记录 SRS 9-3 表中第 4 关牌总数低于第 3 关这一非单调点`() {
-        // 现象来自 SRS 附录 9.3 原表：第 3 关 8x8=64，第 4 关 6x10=60。
-        // 即牌总数序列为 48,48,64,60,64,80,80,80,96,96 —— 在 3→4 处回落一次。
-        // 这不是实现错误，此处显式断言以免日后被误判为回归（详见报告中的 SRS 观察项）。
-        // 难度仍整体上升：第 4 关图案种类与第 3 关相同但少 4 张牌，
-        // 真正拉开难度的是后续关卡的棋盘尺寸与限时。
-        assertEquals(64, LevelCatalog.configOf(3).tileCount)
-        assertEquals(60, LevelCatalog.configOf(4).tileCount)
-
-        var dips = 0
+    fun `牌总数随关卡单调不减`() {
+        // SRS 9.3 自 V1.2 起修正了第 4 关规格（6×10 → 8×8），使牌总数序列
+        // 48, 48, 64, 64, 64, 80, 80, 80, 96, 96 单调不减。
         val levels = LevelCatalog.levels
         for (i in 1 until levels.size) {
-            if (levels[i].tileCount < levels[i - 1].tileCount) dips++
+            val previous = levels[i - 1]
+            val current = levels[i]
+            assertTrue(
+                "第 ${current.level} 关牌总数 ${current.tileCount} 少于第 ${previous.level} 关的 ${previous.tileCount}",
+                current.tileCount >= previous.tileCount,
+            )
         }
-        assertEquals("牌总数序列只应有 1 处回落", 1, dips)
+    }
+
+    @Test
+    fun `棋盘规格按 2 至 3 关一组递增`() {
+        // 这条分组规律本身就是 SRS 9.3 的设计意图，也是 V1.2 修正第 4 关的依据：
+        // 原表里唯独第 4 关（6×10）脱离了分组规律。
+        val groups = LevelCatalog.levels
+            .groupBy { it.cols to it.rows }
+            .map { (size, configs) -> size to configs.map { it.level } }
+
+        assertEquals(
+            listOf(
+                (6 to 8) to listOf(1, 2),
+                (8 to 8) to listOf(3, 4, 5),
+                (8 to 10) to listOf(6, 7, 8),
+                (8 to 12) to listOf(9, 10),
+            ),
+            groups,
+        )
     }
 
     @Test

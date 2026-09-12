@@ -28,8 +28,8 @@ sealed interface SelectResult {
     /**
      * 两张牌图案相同但不可连通（SRS FR-4.4）。
      *
-     * 不消除，给出「无法连通」提示。按 SRS UC-03 步骤 3.b.ii「同 3.a 的反馈」的字面读法，
-     * 同样把第二张牌设为选中并让连击归零。
+     * 不消除，给出「无法连通」提示；连击归零（SRS FR-8.3），但**保留第一张牌的选中态**，
+     * 玩家可直接改选其他搭档，不必重新点第一张（SRS UC-03 步骤 3.b.ii）。
      */
     data class NoPath(val first: Position, val second: Position) : SelectResult
 

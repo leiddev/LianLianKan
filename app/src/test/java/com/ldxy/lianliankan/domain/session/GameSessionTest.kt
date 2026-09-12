@@ -199,7 +199,7 @@ class GameSessionTest {
     }
 
     @Test
-    fun `图案相同但不可连通时不消除并给出无法连通反馈`() {
+    fun `图案相同但不可连通时不消除并保留第一张的选中态`() {
         // 2x3 棋盘：A 与 B 各自对角、被彼此堵死（需 3 拐点），只有竖直相邻的 C 可消
         val h = fixedHarness("ABC", "BAC")
         h.session.start()
@@ -217,9 +217,32 @@ class GameSessionTest {
         assertEquals(at(0, 0), (result as SelectResult.NoPath).first)
         assertEquals(at(1, 1), result.second)
 
-        assertEquals(at(1, 1), h.session.state.selectedPosition)
+        assertEquals(
+            "应保留第一张的选中态（FR-4.4 / UC-03 3.b.ii）",
+            at(0, 0),
+            h.session.state.selectedPosition,
+        )
         assertEquals("不应消除任何牌", 6, h.session.state.remainingTiles)
         assertEquals("连击应归零", 0, h.session.state.score.combo)
+    }
+
+    @Test
+    fun `连通失败后可直接改选其他搭档`() {
+        // A 有 6 张、B 有 2 张。A(0,0) 与对角 A(1,1) 被两个 B 堵死；
+        // 但 A(0,0) 与 A(0,2) 可绕棋盘上方连通。
+        val h = fixedHarness("ABAA", "BAAA")
+        h.session.start()
+
+        h.session.select(at(0, 0))
+        assertTrue("第一对不可连通", h.session.select(at(1, 1)) is SelectResult.NoPath)
+        assertEquals("第一张应仍处于选中态", at(0, 0), h.session.state.selectedPosition)
+
+        // 不重新点第一张，直接改选另一个搭档
+        val result = h.session.select(at(0, 2))
+
+        assertTrue("换搭档后应能成功消除，实际为 $result", result is SelectResult.Eliminated)
+        assertEquals(6, h.session.state.remainingTiles)
+        assertNull("消除后应清空选中态", h.session.state.selectedPosition)
     }
 
     // ============================================================ 死局自动洗牌（FR-6.2）

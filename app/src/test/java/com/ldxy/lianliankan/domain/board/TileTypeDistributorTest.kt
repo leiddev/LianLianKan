@@ -20,7 +20,7 @@ class TileTypeDistributorTest {
         Expectation(level = 1, base = 6, extraTypes = 0),
         Expectation(level = 2, base = 4, extraTypes = 6),
         Expectation(level = 3, base = 6, extraTypes = 5),
-        Expectation(level = 4, base = 6, extraTypes = 0),
+        Expectation(level = 4, base = 6, extraTypes = 2),
         Expectation(level = 5, base = 6, extraTypes = 2),
         Expectation(level = 6, base = 8, extraTypes = 0),
         Expectation(level = 7, base = 6, extraTypes = 7),
