@@ -1,4 +1,24 @@
 <resources>
     <!-- SRS 2.1：单机、离线、中文产品 -->
     <string name="app_name">连连看</string>
+
+    <!-- 游戏界面 HUD（SRS FR-7 / FR-8 / FR-10.4） -->
+    <string name="hud_time">时间</string>
+    <string name="hud_score">得分</string>
+    <string name="hud_combo">连击</string>
+
+    <!-- 底部操作条（SRS FR-9 / FR-10.1） -->
+    <string name="action_hint">提示</string>
+    <string name="action_shuffle">洗牌</string>
+    <string name="action_pause">暂停</string>
+
+    <!-- 一次性提示（SRS 5.1） -->
+    <string name="msg_wrong_type">图案不同，换一张试试</string>
+    <string name="msg_no_path">这两张牌连不上</string>
+    <string name="msg_no_hint_left">提示次数已用完</string>
+    <string name="msg_no_shuffle_left">洗牌次数已用完</string>
+    <string name="msg_auto_shuffled">已自动重排</string>
+
+    <!-- 无障碍描述（SRS FR-13.7 的可辨识性要求） -->
+    <string name="tile_content_description">第 %1$d 行第 %2$d 列</string>
 </resources>

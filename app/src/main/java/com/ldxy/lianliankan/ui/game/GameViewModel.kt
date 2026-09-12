@@ -1,7 +1,10 @@
 package com.ldxy.lianliankan.ui.game
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ldxy.lianliankan.domain.config.LevelConfig
 import com.ldxy.lianliankan.domain.model.Position
 import com.ldxy.lianliankan.domain.score.GameTimer
@@ -80,12 +83,24 @@ class GameViewModel(
 
             is SelectResult.WrongType -> {
                 publish()
-                _effects.tryEmit(GameEffect.ShowMessage(GameMessage.WRONG_TYPE))
+                _effects.tryEmit(
+                    GameEffect.Rejected(
+                        first = result.first,
+                        second = result.second,
+                        message = GameMessage.WRONG_TYPE,
+                    ),
+                )
             }
 
             is SelectResult.NoPath -> {
                 publish()
-                _effects.tryEmit(GameEffect.ShowMessage(GameMessage.NO_PATH))
+                _effects.tryEmit(
+                    GameEffect.Rejected(
+                        first = result.first,
+                        second = result.second,
+                        message = GameMessage.NO_PATH,
+                    ),
+                )
             }
 
             SelectResult.Selected,
@@ -159,5 +174,15 @@ class GameViewModel(
         const val DEFAULT_TICK_INTERVAL_MILLIS: Long = 200L
 
         private const val EFFECT_BUFFER_SIZE = 16
+
+        /**
+         * 为指定关卡构造 [GameViewModel] 的工厂。
+         *
+         * M7 接入导航后由 `GameScreen` 的路由参数提供 [LevelConfig]；
+         * M6 阶段由 `MainActivity` 直接传入第 1 关，便于在没有导航的条件下验证棋盘交互。
+         */
+        fun factory(config: LevelConfig): ViewModelProvider.Factory = viewModelFactory {
+            initializer { GameViewModel(config) }
+        }
     }
 }

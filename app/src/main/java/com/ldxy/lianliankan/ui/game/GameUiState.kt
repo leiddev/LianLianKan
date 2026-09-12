@@ -1,5 +1,6 @@
 package com.ldxy.lianliankan.ui.game
 
+import com.ldxy.lianliankan.domain.model.Position
 import com.ldxy.lianliankan.domain.model.Tile
 import com.ldxy.lianliankan.domain.path.PathResult
 import com.ldxy.lianliankan.domain.session.GameState
@@ -49,6 +50,17 @@ sealed interface GameEffect {
     ) : GameEffect
 
     data class ShowMessage(val message: GameMessage) : GameEffect
+
+    /**
+     * 一次错误选中：两张牌需要抖动 + 红闪（SRS FR-4.4 / FR-4.5），并弹出 [message] 提示。
+     *
+     * [first] / [second] 是涉及的两张牌的位置，供 `BoardView` 定位高亮。
+     */
+    data class Rejected(
+        val first: Position,
+        val second: Position,
+        val message: GameMessage,
+    ) : GameEffect
 }
 
 /**
