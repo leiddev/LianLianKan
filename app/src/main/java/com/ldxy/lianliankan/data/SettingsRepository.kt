@@ -2,6 +2,7 @@ package com.ldxy.lianliankan.data
 
 import com.ldxy.lianliankan.domain.model.Settings
 import com.ldxy.lianliankan.domain.model.ThemeMode
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,8 +16,13 @@ import kotlinx.coroutines.flow.update
  */
 interface SettingsRepository {
 
-    /** 当前设置，随修改实时更新（SRS FR-11.6：修改后立即生效）。 */
-    val settings: StateFlow<Settings>
+    /**
+     * 当前设置，随修改实时更新（SRS FR-11.6：修改后立即生效）。
+     *
+     * 暴露 [Flow] 而非 `StateFlow`：DataStore 实现拿不到协程作用域、无法自行转成 StateFlow。
+     * 需要同步初值的调用方（如 `MainActivity`）自行通过 `collectAsStateWithLifecycle(initialValue)` 提供。
+     */
+    val settings: Flow<Settings>
 
     suspend fun setSoundEnabled(enabled: Boolean)
 

@@ -2,6 +2,7 @@ package com.ldxy.lianliankan.data
 
 import com.ldxy.lianliankan.domain.config.LevelCatalog
 import com.ldxy.lianliankan.domain.model.Progress
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,7 +15,8 @@ import kotlinx.coroutines.flow.update
  */
 interface ProgressRepository {
 
-    val progress: StateFlow<Progress>
+    /** 当前进度；与 [SettingsRepository.settings] 同理暴露 [Flow]。 */
+    val progress: Flow<Progress>
 
     /**
      * 记录一次通关：刷新最佳分并解锁下一关（SRS FR-2.4 / FR-8.5）。
