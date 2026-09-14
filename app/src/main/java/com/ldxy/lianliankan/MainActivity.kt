@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.SideEffect
@@ -23,8 +22,8 @@ import com.ldxy.lianliankan.data.appDataStore
 import com.ldxy.lianliankan.domain.model.Settings
 import com.ldxy.lianliankan.ui.SplashGate
 import com.ldxy.lianliankan.ui.nav.AppNavHost
+import com.ldxy.lianliankan.ui.theme.AnimatedBackground
 import com.ldxy.lianliankan.ui.theme.LianLianKanTheme
-import com.ldxy.lianliankan.ui.theme.appBackgroundBrush
 import kotlinx.coroutines.launch
 
 /**
@@ -112,11 +111,12 @@ class MainActivity : ComponentActivity() {
                 paletteId = settings.themePaletteId,
                 skinId = settings.skinId,
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(appBackgroundBrush()),
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // 动态背景（V1.5 / SRS FR-13.9）：铺满全屏，且必须在所有界面内容**之下** ——
+                    // [Box] 的子级按声明顺序绘制，所以它是第一个子级。
+                    // 只有前台 RESUMED 时它才会真正运动（内部用生命周期门控，见 AnimatedBackground.kt）。
+                    AnimatedBackground(modifier = Modifier.fillMaxSize())
+
                     AppNavHost(
                         settingsRepository = settingsRepository,
                         progressRepository = progressRepository,
