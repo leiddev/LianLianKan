@@ -33,8 +33,8 @@ android {
         applicationId = "com.ldxy.lianliankan"
         minSdk = 24
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -73,6 +73,10 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+
+    // 启动画面（V1.4）：冷启动时用品牌底色 + 品牌图标顶掉平台默认白屏，
+    // 并支持「设置读完之前不放行」（见 MainActivity 与 values/themes.xml）
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.kotlinx.coroutines.android)
 
     // 标准 M3 色调板算法，用于从种子色生成 4 套主题配色（V1.3）

@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  自适应图标（V1.4）：三层都由 tools/generate_icon.py 从同一份形状定义产出，
+  手工改动会被下一次生成覆盖。
+  monochrome 必须是**单色剪影**（Android 13+ 主题图标由系统着色），
+  因此不能复用前景 —— 前景里牌面与图案点是两种颜色。
+-->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@drawable/ic_launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />
-    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>

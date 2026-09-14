@@ -23,6 +23,23 @@ interface SettingsRepository {
      */
     val settings: Flow<Settings>
 
+    /**
+     * 是否已读到设置的**首个真实值**（V1.4 需求 ②）。
+     *
+     * ### 为什么需要这个信号
+     * 冷启动时启动画面要「按住」到设置就绪再放行。若不等，界面会先按 [Settings] 的
+     * 默认值（主题编号 0）渲染一帧，读到 DataStore 的真实值后再跳到玩家实际选的
+     * 配色 —— 这是一次肉眼可见的颜色跳变，与白屏叠加在一起，正是需求 ② 要解决的。
+     *
+     * 界面层**不能靠 delay 猜时间**（猜短了没用、猜长了平白拖慢启动），
+     * 所以由仓库层给出一个明确信号：[DataStoreSettingsRepository] 在首个值读到的
+     * 瞬间置 true，[InMemorySettingsRepository] 因为本就在内存里，恒为 true。
+     *
+     * 注意它只表示「读到了」，不表示「读成功」—— 读盘失败时它会一直停在 false，
+     * 由调用方的超时兜底放行（否则「读不到设置」会变成「应用起不来」）。
+     */
+    val isLoaded: StateFlow<Boolean>
+
     suspend fun setSoundEnabled(enabled: Boolean)
 
     suspend fun setVibrationEnabled(enabled: Boolean)
@@ -44,6 +61,14 @@ class InMemorySettingsRepository(
 
     private val state = MutableStateFlow(initial)
     override val settings: StateFlow<Settings> = state.asStateFlow()
+
+    /**
+     * 内存实现没有「读盘」这一步，构造完成即已就绪，因此恒为 true。
+     *
+     * 用 `MutableStateFlow(true)` 而不是 `flowOf(true)`：类型是接口的一部分
+     * （`StateFlow`），这里必须给出一个真正的 StateFlow。
+     */
+    override val isLoaded: StateFlow<Boolean> = MutableStateFlow(true)
 
     override suspend fun setSoundEnabled(enabled: Boolean) =
         state.update { it.copy(soundEnabled = enabled) }

@@ -5,4 +5,33 @@
       使用平台主题可避免引入 Material Components（Views）依赖。
     -->
     <style name="Theme.LianLianKan" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+      启动主题（V1.4，对应 core-splashscreen）。
+
+      **为什么需要它**：冷启动时系统第一件事是画窗口主题的 windowBackground
+      （平台默认是白色），而 Compose 的首帧要等 onCreate → setContent →
+      首次组合完成才出现。这段空档露出的白底就是「启动瞬间白屏」。
+      交给启动画面库之后，这段空档由品牌图标 + 品牌底色占住。
+
+      **为什么窗口主题要单独一个**：windowSplashScreenBackground 等属性在
+      Theme.SplashScreen 里才有默认值，且启动画面结束后要切回应用主题
+      （postSplashScreenTheme），所以用一个子主题，AndroidManifest 只让
+      MainActivity 用它 —— 保留 Theme.LianLianKan 给其他场景不变。
+
+      **windowSplashScreenAnimatedIcon 用前景而不是自适应图标**：这里要的是
+      一张能独立显示的图。前景已按自适应图标的安全区作画（内容在中心 66dp 圆内），
+      因此任何形状的遮罩都不会把它切掉。代价是系统在 API 31+ 会把这张 108dp
+      画布塞进 192dp 的可见圆里，图标看起来偏小 —— 若真机观感不佳，
+      再单独出一张放大版启动图标即可（见 V1.4 计划 §10 的待验收项）。
+
+      **android:windowLightStatusBar = true**：与 V1.3 的边到边 + 深色状态栏图标
+      保持一致，否则启动的那一瞬间状态栏图标会是浅色、几乎看不见。
+    -->
+    <style name="Theme.LianLianKan.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.LianLianKan</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>

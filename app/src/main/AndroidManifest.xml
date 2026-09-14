@@ -16,12 +16,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LianLianKan">
 
-        <!-- SRS FR-1.4：界面锁定竖屏 -->
+        <!--
+          SRS FR-1.4：界面锁定竖屏。
+          android:theme 指向**启动主题**（V1.4）：它比应用主题多一层
+          「先显示品牌启动画面、读完设置再切回 Theme.LianLianKan」的行为，
+          用在这里就不会白屏。application 级仍是应用主题，其他场景不受影响。
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.LianLianKan"
+            android:theme="@style/Theme.LianLianKan.Starting"
             tools:ignore="LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  这里只放**不能用 Compose 表达**的颜色：界面配色一律由 Material 3 从种子色
+  在运行期生成（见 ui/theme/Palette.kt），写成资源反而会绕过测试保证的对比度。
+  启动主题是例外 —— 窗口主题在 Compose 起来之前就要被系统读走。
+-->
+<resources>
+    <!--
+      启动画面底色（V1.4）。取值是默认主题色（浅蓝）生成出的 background：
+      `ThemePalettes.byId(0).light.background` = 0xFFF8F9FC。
+
+      为什么可以用一个固定值：4 套配色的 background 都是「带极轻色相的近白色」
+      （浅蓝 #F8F9FC / 黄绿 #FAFBE8 / 玫红 #FFF8F7 / 琥珀 #FFF8F3），
+      两两之间单个通道最大差 20/255（浅蓝与黄绿的蓝通道），肉眼几乎不可见；
+      而启动时本来也还不知道玩家选的是哪一套。若要改主题色，可重新取默认配色的
+      background 覆盖此值，无需为启动画面再做一套运行期配色。
+    -->
+    <color name="splash_background">#F8F9FC</color>
+</resources>

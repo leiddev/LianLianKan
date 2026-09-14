@@ -19,6 +19,12 @@ coroutines = "1.11.0"
 
 coreKtx = "1.19.0"
 
+# --- 启动画面（V1.4）---
+# 2026-09-12 查询 Google Maven maven-metadata.xml 确认的最新稳定版
+# （1.2.0 之后只有 alpha/beta，不取）。API 24 起可用：API 31+ 走系统启动画面，
+# 更低版本由库自行补一个兼容实现。
+coreSplashscreen = "1.2.0"
+
 # --- 配色生成（V1.3）---
 # 标准 M3 色调板算法。官方 material-color-utilities 未发布到 Maven Central，
 # 这里用 me.tatarka 对 Google 官方源码的原样转发（已下载 jar 核对 API：
@@ -32,6 +38,7 @@ espressoCore = "3.5.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 
 # 配色生成（V1.3）
 material-color-utilities = { group = "me.tatarka.google.material", name = "material-color-utilities", version.ref = "materialColorUtilities" }

@@ -9,18 +9,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.ldxy.lianliankan.data.DataStoreProgressRepository
 import com.ldxy.lianliankan.data.DataStoreSettingsRepository
 import com.ldxy.lianliankan.data.ProgressRepository
 import com.ldxy.lianliankan.data.SettingsRepository
 import com.ldxy.lianliankan.data.appDataStore
 import com.ldxy.lianliankan.domain.model.Settings
+import com.ldxy.lianliankan.ui.SplashGate
 import com.ldxy.lianliankan.ui.nav.AppNavHost
 import com.ldxy.lianliankan.ui.theme.LianLianKanTheme
 import com.ldxy.lianliankan.ui.theme.appBackgroundBrush
+import kotlinx.coroutines.launch
 
 /**
  * 应用唯一 Activity（SRS FR-1.4：锁定竖屏，见 AndroidManifest.xml）。
@@ -37,7 +42,28 @@ class MainActivity : ComponentActivity() {
         DataStoreProgressRepository(applicationContext.appDataStore)
     }
 
+    /**
+     * 启动画面是否可以退场了（V1.4 需求 ②）。
+     *
+     * 只在主线程读写：写方是 [onCreate] 里那个 `lifecycleScope` 协程（主调度器），
+     * 读方是系统在主线程每帧询问的放行条件，因此不需要任何同步手段。
+     */
+    private var isSettingsLoaded = false
+
+    /**
+     * 启动画面期间抓到的**首个真实设置**（可能为 null —— 超时兜底路径）。
+     *
+     * 它让 `setContent` 的**首次组合**就能用上玩家选的配色，而不是先按
+     * [Settings] 的默认配色组合一帧、等 DataStore 的值到了再重组跳色。
+     */
+    private var initialSettings: Settings? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 启动画面必须在 `super.onCreate` **之前**安装：晚一行，系统就已经用
+        // 窗口主题画过首帧，那层白底照样会闪一下 —— 这正是需求 ② 要消除的东西。
+        // 放行条件用「设置是否已读到首值」而不是时间（见下面的兜底说明）。
+        installSplashScreen().setKeepOnScreenCondition { !isSettingsLoaded }
+
         // 边到边（V1.1 改进 I-4）。
         //
         // targetSdk = 37 意味着 Android 15（API 35）起系统**已强制**边到边，且
@@ -47,11 +73,30 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         super.onCreate(savedInstanceState)
+
+        // 放行启动画面的两条路径（V1.4 需求 ②）。
+        //
+        // ① 正常路径：仓库报「已读到首个真实值」并通过同一份数据取回该值。
+        //    不等的话，界面会先按默认配色渲染、再跳到玩家实际选的配色，
+        //    那是一次肉眼可见的颜色跳变，与白屏叠加在一起。
+        // ② 兜底路径：超时也放行。**这一条不可省略** —— DataStore 因文件损坏等原因
+        //    读不出值时，放行条件会永远为 false，启动画面就永远留在屏幕上，
+        //    「读不到设置」于是变成「应用起不来」（V1.4 计划风险 R-3，等级高）。
+        //
+        // 逻辑放在 ui/SplashGate.kt 而不是这里，是为了让这两条路径都能被 JVM 单测
+        // 覆盖（在 Activity 里就只能靠真机验收了）。
+        lifecycleScope.launch {
+            initialSettings = SplashGate.awaitSettings(settingsRepository)
+            isSettingsLoaded = true
+        }
+
         setContent {
-            // DataStore 的首个值需要读盘，因此必须给初始值；用 SRS 7.2 的默认值即可，
-            // 读到真实值后会自动切换到用户设置。
+            // 首次组合用启动画面期间抓到的真实设置（超时兜底路径下它是 null，
+            // 退回 SRS 7.2 的默认值，随后由数据到达触发的重组纠正）。
+            // 用 remember 固定：之后的变化一律以 DataStore 的流为准。
+            val initial = remember { initialSettings ?: Settings() }
             val settings by settingsRepository.settings
-                .collectAsStateWithLifecycle(initialValue = Settings())
+                .collectAsStateWithLifecycle(initialValue = initial)
 
             // 状态栏图标（时间 / 信号 / 电量）恒为深色（I-4）。
             // 边到边之后状态栏是透明的，露出的是 APP 自己的渐变背景，因此
