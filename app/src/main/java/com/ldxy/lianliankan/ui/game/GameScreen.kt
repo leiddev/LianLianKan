@@ -6,23 +6,30 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,7 +44,7 @@ import com.ldxy.lianliankan.ui.dialog.ResultDialog
 import kotlin.math.PI
 import kotlin.math.min
 import kotlin.math.sin
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 /**
  * 游戏主界面（开发计划 M6）。
@@ -66,9 +73,6 @@ fun GameScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val state = uiState.game
 
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
     // 文案在 composable 内解析；用 rememberUpdatedState 让长驻的 collector 始终读到最新值，
     // 又不会因为 map 每次重建而重启收集。
     val messages = mapOf(
@@ -83,8 +87,26 @@ fun GameScreen(
     var elimination by remember { mutableStateOf<GameEffect.Eliminated?>(null) }
     var rejection by remember { mutableStateOf<GameEffect.Rejected?>(null) }
 
+    // 提示文案（V1.1 改进 I-2 / I-3）。
+    // token 每次自增，作为下面 LaunchedEffect 的 key —— 这样**连点两次相同文案**
+    // 也会重新计时；若只用文案做 key，第二条会继承第一条的剩余时间而提前消失。
+    var notice by remember { mutableStateOf<Notice?>(null) }
+    var noticeToken by remember { mutableIntStateOf(0) }
+    val showNotice: (String) -> Unit = { text ->
+        noticeToken += 1
+        notice = Notice(text = text, token = noticeToken)
+    }
+
     val lineProgress = remember { Animatable(0f) }
     val shakeProgress = remember { Animatable(0f) }
+
+    // 提示到点自动消失。key 用 token：新提示一来就重启计时。
+    LaunchedEffect(notice?.token) {
+        if (notice != null) {
+            delay(NOTICE_MILLIS)
+            notice = null
+        }
+    }
 
     // 一次性效果：动画与提示（SRS FR-4.4 / FR-4.5 / FR-4.6 / FR-6.2 / FR-9.3）
     LaunchedEffect(viewModel) {
@@ -100,15 +122,10 @@ fun GameScreen(
                 is GameEffect.Rejected -> {
                     feedback.dispatch(FeedbackEvent.ERROR)
                     rejection = effect
-                    // 另起协程弹提示：showSnackbar 会挂起到消失，不能阻塞事件收集
-                    scope.launch {
-                        snackbarHostState.showSnackbar(latestMessages.getValue(effect.message))
-                    }
+                    showNotice(latestMessages.getValue(effect.message))
                 }
 
-                is GameEffect.ShowMessage -> scope.launch {
-                    snackbarHostState.showSnackbar(latestMessages.getValue(effect.message))
-                }
+                is GameEffect.ShowMessage -> showNotice(latestMessages.getValue(effect.message))
             }
         }
     }
@@ -147,7 +164,12 @@ fun GameScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            GameHud(state = state)
+            // 边到边后内容会绘制到状态栏下方，因此 HUD 与底部操作条各自避让系统栏
+            // （V1.1 改进 I-4）。没有这层插边，顶部 HUD 会被状态栏压住。
+            GameHud(
+                state = state,
+                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
+            )
 
             BoxWithConstraints(
                 modifier = Modifier
@@ -218,15 +240,22 @@ fun GameScreen(
                 onHintClick = viewModel::onHintClick,
                 onShuffleClick = viewModel::onShuffleClick,
                 onPauseClick = viewModel::onPauseClick,
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
             )
         }
 
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 88.dp),
-        )
+        // 提示文案（V1.1 改进 I-2 / I-3）。刻意**不用** Material 3 的 SnackbarHost：
+        // 它内部按队列播放，后到的提示要等前一条显示完，与「后到即替换」的要求相反。
+        // 这里直接渲染当前 notice，新提示一来旧的即刻消失、新的立刻出现。
+        notice?.let { current ->
+            NoticeBanner(
+                text = current.text,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 96.dp),
+            )
+        }
     }
 
     // 结算：通关时记录最佳分并解锁下一关（SRS FR-2.4 / FR-8.5 / FR-10.4）。
@@ -297,3 +326,46 @@ private const val GHOST_SHRINK = 0.4f
 
 /** 格子边长下限，避免极端窄屏下算出 0 导致布局异常。 */
 private const val MIN_CELL_DP = 16f
+
+/** 提示文案的显示时长（V1.1 改进 I-2）。比 Material 默认的 4 秒短 —— 它是操作反馈，不是需要阅读的通知。 */
+private const val NOTICE_MILLIS = 1_800L
+
+/**
+ * 当前提示文案。
+ *
+ * [token] 每次自增，用于让 `LaunchedEffect` 在**文案相同**时也能重新计时（V1.1 改进 I-2）。
+ */
+private data class Notice(val text: String, val token: Int)
+
+/**
+ * 提示条（V1.1 改进 I-3）。
+ *
+ * 文字**居中**，背景为**浅色半透明**。浅色底在深浅两种主题下都保持同一表现
+ * （见 doc/V1.1改进计划.md 的 I-3：若改为跟随主题，深色主题下就不是「浅色半透明」了），
+ * 因此这里直接用固定的白色半透明 + 深色文字，而不取 `colorScheme`。
+ *
+ * 刻意不加淡入淡出动画：需求是「前一条立刻消失、立即显示最新的」，任何过渡都会削弱这一点。
+ */
+@Composable
+private fun NoticeBanner(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        color = Color.White.copy(alpha = 0.86f),
+        contentColor = NOTICE_TEXT_COLOR,
+        shadowElevation = 4.dp,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** 浅色半透明底上的文字色：直接用近黑，保证在白色 86% 透明度下对比度充足。 */
+private val NOTICE_TEXT_COLOR = Color(0xFF1B1B1B)

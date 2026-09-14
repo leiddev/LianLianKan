@@ -20,7 +20,8 @@
     <string name="action_confirm">确定</string>
     <string name="action_cancel">取消</string>
 
-    <!-- 游戏界面 HUD（SRS FR-7 / FR-8） -->
+    <!-- 游戏界面 HUD（SRS FR-7 / FR-8，V1.1 增补关卡显示） -->
+    <string name="hud_level">关卡</string>
     <string name="hud_time">时间</string>
     <string name="hud_score">得分</string>
     <string name="hud_combo">连击</string>

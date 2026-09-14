@@ -129,13 +129,14 @@ class GameSession(
             return SelectResult.WrongType(first = selectedPosition, second = position)
         }
 
-        // 图案相同但不可连通 → 不消除，且保留第一张的选中态（FR-4.4、UC-03 3.b.ii）
+        // 图案相同但不可连通 → 不消除，并清空选中态（FR-4.4）
         val path = PathFinder.find(board, selectedPosition, position)
         if (path == null) {
-            // board 已清除提示高亮，第一张牌的 SELECTED 状态原样保留，
-            // 玩家可直接改选其他搭档，不必重新点第一张。
+            // 两张牌都不再选中：出错后回到「未选」状态，下一次点击从干净状态开始。
+            // V1.0 的行为是保留第一张选中（决策 D-4，便于直接换搭档），
+            // V1.1 按验收意见撤销 D-4 改为完全清空（见 doc/V1.1改进计划.md 的 I-1）。
             current = snapshot.copy(
-                board = board,
+                board = clearSelection(board),
                 score = resetCombo(snapshot.score),
             )
             return SelectResult.NoPath(first = selectedPosition, second = position)

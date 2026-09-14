@@ -3,10 +3,13 @@ package com.ldxy.lianliankan.ui.menu
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +45,9 @@ fun MenuScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            // 边到边后避让系统栏（V1.1 改进 I-4）：主菜单没有 Scaffold，
+            // 不显式插边会让标题顶到状态栏下面。
+            .windowInsetsPadding(WindowInsets.systemBars)
             .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

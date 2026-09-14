@@ -3,13 +3,16 @@ package com.ldxy.lianliankan
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ldxy.lianliankan.data.DataStoreProgressRepository
 import com.ldxy.lianliankan.data.DataStoreSettingsRepository
@@ -38,14 +41,31 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 边到边（V1.1 改进 I-4）。
+        //
+        // targetSdk = 37 意味着 Android 15（API 35）起系统**已强制**边到边，且
+        // android:statusBarColor 被弃用、设置无效。这里显式开启，是为了让 Android 14
+        // 及以下设备也保持一致行为 —— 否则会出现「新系统压住顶部内容、旧系统不压」这种
+        // 只在部分设备上复现的问题。
+        enableEdgeToEdge()
+
         super.onCreate(savedInstanceState)
         setContent {
             // DataStore 的首个值需要读盘，因此必须给初始值；用 SRS 7.2 的默认值即可，
             // 读到真实值后会自动切换到用户设置。
             val settings by settingsRepository.settings
                 .collectAsStateWithLifecycle(initialValue = Settings())
+            val darkTheme = settings.themeMode.resolveDarkTheme()
 
-            LianLianKanTheme(darkTheme = settings.themeMode.resolveDarkTheme()) {
+            // 状态栏图标（时间 / 信号 / 电量）按背景明暗自动切换黑白（I-4）。
+            // 边到边之后状态栏是透明的，露出的是 APP 自己的渐变背景，
+            // 因此「状态栏颜色与 APP 统一」是自动达成的，不需要再设 statusBarColor。
+            SideEffect {
+                WindowCompat.getInsetsController(window, window.decorView)
+                    .isAppearanceLightStatusBars = !darkTheme
+            }
+
+            LianLianKanTheme(darkTheme = darkTheme) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

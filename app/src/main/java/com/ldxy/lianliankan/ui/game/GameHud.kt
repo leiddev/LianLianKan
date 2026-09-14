@@ -55,6 +55,13 @@ fun GameHud(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // 当前关卡（V1.1 改进 I-5）。直接取 config.level，不另存状态，
+            // 因此从「关卡选择」/「下一关」/「重试本关」任一路径进入都必然显示正确。
+            HudItem(
+                label = stringResource(R.string.hud_level),
+                value = state.config.level.toString(),
+                valueColor = colors.secondary,
+            )
             HudItem(
                 label = stringResource(R.string.hud_time),
                 value = formatTime(state.timeLeftSeconds),
