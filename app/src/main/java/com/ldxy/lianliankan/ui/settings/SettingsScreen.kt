@@ -1,7 +1,11 @@
 package com.ldxy.lianliankan.ui.settings
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,8 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -18,7 +23,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -31,12 +35,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ldxy.lianliankan.R
-import com.ldxy.lianliankan.domain.model.ThemeMode
 import com.ldxy.lianliankan.ui.game.TileFaceBox
+import com.ldxy.lianliankan.ui.theme.ThemePalette
+import com.ldxy.lianliankan.ui.theme.ThemePalettes
 import com.ldxy.lianliankan.ui.theme.TileSkin
 import com.ldxy.lianliankan.ui.theme.TileSkins
 
@@ -89,24 +98,20 @@ fun SettingsScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
+            // 主题配色（SRS FR-11.3 / V1.3）。
+            // 色块而不是文字单选：主题的差别就是颜色本身，让玩家看着颜色选。
             Text(
-                text = stringResource(R.string.settings_theme),
+                text = stringResource(R.string.settings_theme_color),
                 style = MaterialTheme.typography.titleSmall,
             )
-            Column(modifier = Modifier.selectableGroup()) {
-                ThemeMode.entries.forEach { mode ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(
-                            selected = settings.themeMode == mode,
-                            onClick = { viewModel.onThemeModeChange(mode) },
-                        )
-                        Text(text = themeModeLabel(mode))
-                    }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ThemePalettes.all.forEach { palette ->
+                    ThemeSwatch(
+                        palette = palette,
+                        selected = settings.themePaletteId == palette.id,
+                        onClick = { viewModel.onThemePaletteChange(palette.id) },
+                    )
                 }
             }
 
@@ -185,14 +190,41 @@ private fun SwitchRow(
     }
 }
 
+/**
+ * 一个圆形主题色块（SRS FR-11.3）。
+ *
+ * 填充的是该配色方案的 `primary` 而非种子色 —— 玩家在界面上真正看到并与之交互的
+ * 就是 `primary`（按钮、选中高亮），色块必须与之一致，否则选了「浅蓝」却发现按钮是别的蓝。
+ *
+ * 选中态用 `onSurface` 描边（而不是 `primary`）：`onSurface` 与任何一套配色的 `primary`
+ * 都拉开了明度差，因此描边在 4 种颜色上都清晰。
+ */
 @Composable
-private fun themeModeLabel(mode: ThemeMode): String = stringResource(
-    when (mode) {
-        ThemeMode.SYSTEM -> R.string.settings_theme_system
-        ThemeMode.LIGHT -> R.string.settings_theme_light
-        ThemeMode.DARK -> R.string.settings_theme_dark
-    },
-)
+private fun ThemeSwatch(
+    palette: ThemePalette,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    // 读屏需要能念出「浅蓝 / 黄绿 / ...」而不是「theme-1」，因此用字符串资源而不是编号。
+    // 色块本身没有可见文字，contentDescription 是它唯一的无障碍入口。
+    val label = stringResource(palette.nameRes)
+    Box(
+        modifier = Modifier
+            .size(THEME_SWATCH_SIZE)
+            .clip(CircleShape)
+            .background(palette.light.primary)
+            .border(
+                width = if (selected) 3.dp else 0.dp,
+                color = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                shape = CircleShape,
+            )
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = label },
+    )
+}
+
+/** 主题色块边长：够大便于点按，一行 4 个在竖屏下也不会换行。 */
+private val THEME_SWATCH_SIZE = 48.dp
 
 /**
  * 一张皮肤卡片：左侧渲染该皮肤的 3 个示例牌面，右侧是皮肤名与选中标记。

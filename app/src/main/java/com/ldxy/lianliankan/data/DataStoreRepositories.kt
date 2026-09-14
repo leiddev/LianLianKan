@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.edit
 import com.ldxy.lianliankan.domain.config.LevelCatalog
 import com.ldxy.lianliankan.domain.model.Progress
 import com.ldxy.lianliankan.domain.model.Settings
-import com.ldxy.lianliankan.domain.model.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -28,7 +27,7 @@ class DataStoreSettingsRepository(
     override suspend fun setVibrationEnabled(enabled: Boolean) =
         update { it.copy(vibrationEnabled = enabled) }
 
-    override suspend fun setThemeMode(mode: ThemeMode) = update { it.copy(themeMode = mode) }
+    override suspend fun setThemePaletteId(id: Int) = update { it.copy(themePaletteId = id) }
 
     override suspend fun setSkinId(skinId: Int) = update { it.copy(skinId = skinId) }
 

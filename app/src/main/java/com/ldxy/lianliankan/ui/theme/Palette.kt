@@ -1,9 +1,11 @@
 package com.ldxy.lianliankan.ui.theme
 
+import androidx.annotation.StringRes
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.ldxy.lianliankan.R
 import me.tatarka.google.material.dynamiccolor.MaterialDynamicColors
 import me.tatarka.google.material.hct.Hct
 import me.tatarka.google.material.scheme.SchemeContent
@@ -26,6 +28,8 @@ import me.tatarka.google.material.scheme.SchemeContent
  */
 data class ThemePalette(
     val id: Int,
+    /** 设置页展示用与读屏用的名字。用资源 id 而非字符串，便于本地化。 */
+    @StringRes val nameRes: Int,
     val seed: Color,
     val light: ColorScheme,
 )
@@ -40,16 +44,16 @@ object ThemePalettes {
 
     const val DEFAULT_ID = 0
 
-    /** 4 个种子色，由开发者指定。 */
-    private val SEEDS: List<Color> = listOf(
-        Color(0xFF8FD3F6), // 浅蓝
-        Color(0xFFABCA14), // 黄绿
-        Color(0xFFFE2472), // 玫红
-        Color(0xFFFFBA07), // 琥珀
+    /** 4 个种子色，由开发者指定（色值见 SRS FR-11.3）。 */
+    private val SEEDS: List<Pair<Int, Color>> = listOf(
+        R.string.theme_color_blue to Color(0xFF8FD3F6), // 浅蓝
+        R.string.theme_color_lime to Color(0xFFABCA14), // 黄绿
+        R.string.theme_color_pink to Color(0xFFFE2472), // 玫红
+        R.string.theme_color_amber to Color(0xFFFFBA07), // 琥珀
     )
 
-    val all: List<ThemePalette> = SEEDS.mapIndexed { index, seed ->
-        ThemePalette(id = index, seed = seed, light = schemeFrom(seed))
+    val all: List<ThemePalette> = SEEDS.mapIndexed { index, (nameRes, seed) ->
+        ThemePalette(id = index, nameRes = nameRes, seed = seed, light = schemeFrom(seed))
     }
 
     val default: ThemePalette get() = all[DEFAULT_ID]

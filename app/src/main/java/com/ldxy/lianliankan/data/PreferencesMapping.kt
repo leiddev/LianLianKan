@@ -4,7 +4,6 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import com.ldxy.lianliankan.domain.model.Progress
 import com.ldxy.lianliankan.domain.model.Settings
-import com.ldxy.lianliankan.domain.model.ThemeMode
 
 /**
  * `Preferences` ↔ 领域模型的纯映射（SRS 7.2 数据字典）。
@@ -22,25 +21,18 @@ internal object PreferencesMapping {
     fun readSettings(preferences: Preferences): Settings = Settings(
         soundEnabled = preferences[DataStoreKeys.SOUND_ENABLED] ?: true,
         vibrationEnabled = preferences[DataStoreKeys.VIBRATION_ENABLED] ?: true,
-        themeMode = preferences[DataStoreKeys.THEME_MODE].toThemeMode(),
+        // 编号是 Int 键，读不出类型不符的值；只需挡住负数 —— 越界的正数由
+        // `ThemePalettes.byId` 回退到默认配色，这里不重复实现那份兜底
+        themePaletteId = preferences[DataStoreKeys.THEME_PALETTE_ID]?.coerceAtLeast(0) ?: 0,
         skinId = preferences[DataStoreKeys.SKIN_ID] ?: 0,
     )
 
     fun writeSettings(preferences: MutablePreferences, settings: Settings) {
         preferences[DataStoreKeys.SOUND_ENABLED] = settings.soundEnabled
         preferences[DataStoreKeys.VIBRATION_ENABLED] = settings.vibrationEnabled
-        preferences[DataStoreKeys.THEME_MODE] = settings.themeMode.name
+        preferences[DataStoreKeys.THEME_PALETTE_ID] = settings.themePaletteId
         preferences[DataStoreKeys.SKIN_ID] = settings.skinId
     }
-
-    /**
-     * 主题模式字符串 → 枚举。
-     *
-     * 存储值可能来自旧版本或被外部改写，因此非法值一律回退到默认的「跟随系统」（SYSTEM），
-     * 而不是抛异常 —— 设置损坏不应该让应用起不来。
-     */
-    private fun String?.toThemeMode(): ThemeMode =
-        ThemeMode.entries.firstOrNull { it.name == this } ?: ThemeMode.SYSTEM
 
     // ================================================================ 进度
 

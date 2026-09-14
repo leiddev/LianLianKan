@@ -1,4 +1,0 @@
-<resources>
-    <!-- 深色模式窗口主题，与 values/themes.xml 对应（SRS FR-13.2）。 -->
-    <style name="Theme.LianLianKan" parent="android:Theme.Material.NoActionBar" />
-</resources>

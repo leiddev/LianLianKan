@@ -1,7 +1,6 @@
 package com.ldxy.lianliankan.data
 
 import com.ldxy.lianliankan.domain.model.Settings
-import com.ldxy.lianliankan.domain.model.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +27,8 @@ interface SettingsRepository {
 
     suspend fun setVibrationEnabled(enabled: Boolean)
 
-    suspend fun setThemeMode(mode: ThemeMode)
+    /** 主题配色编号（SRS FR-11.3：V1.3 起是 4 种主题色，不是深浅三态）。 */
+    suspend fun setThemePaletteId(id: Int)
 
     suspend fun setSkinId(skinId: Int)
 }
@@ -51,8 +51,8 @@ class InMemorySettingsRepository(
     override suspend fun setVibrationEnabled(enabled: Boolean) =
         state.update { it.copy(vibrationEnabled = enabled) }
 
-    override suspend fun setThemeMode(mode: ThemeMode) =
-        state.update { it.copy(themeMode = mode) }
+    override suspend fun setThemePaletteId(id: Int) =
+        state.update { it.copy(themePaletteId = id) }
 
     override suspend fun setSkinId(skinId: Int) =
         state.update { it.copy(skinId = skinId) }

@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.preferencesOf
 import com.ldxy.lianliankan.domain.model.Progress
 import com.ldxy.lianliankan.domain.model.Settings
-import com.ldxy.lianliankan.domain.model.ThemeMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -27,7 +26,7 @@ class PreferencesMappingTest {
 
         assertTrue("音效默认开启", settings.soundEnabled)
         assertTrue("振动默认开启", settings.vibrationEnabled)
-        assertEquals("主题默认跟随系统", ThemeMode.SYSTEM, settings.themeMode)
+        assertEquals("主题默认编号为 0", 0, settings.themePaletteId)
         assertEquals(0, settings.skinId)
     }
 
@@ -36,7 +35,7 @@ class PreferencesMappingTest {
         val original = Settings(
             soundEnabled = false,
             vibrationEnabled = false,
-            themeMode = ThemeMode.DARK,
+            themePaletteId = 3,
             skinId = 3,
         )
         val preferences = mutablePreferencesOf()
@@ -46,22 +45,23 @@ class PreferencesMappingTest {
     }
 
     @Test
-    fun `主题模式写入的是枚举名且三种取值都能往返`() {
-        for (mode in ThemeMode.entries) {
+    fun `主题编号以 Int 存储且四套配色都能往返`() {
+        for (id in 0 until 4) {
             val preferences = mutablePreferencesOf()
-            PreferencesMapping.writeSettings(preferences, Settings(themeMode = mode))
+            PreferencesMapping.writeSettings(preferences, Settings(themePaletteId = id))
 
-            assertEquals(mode.name, preferences[DataStoreKeys.THEME_MODE])
-            assertEquals(mode, PreferencesMapping.readSettings(preferences).themeMode)
+            assertEquals(id, preferences[DataStoreKeys.THEME_PALETTE_ID])
+            assertEquals(id, PreferencesMapping.readSettings(preferences).themePaletteId)
         }
     }
 
     @Test
-    fun `主题模式为非法字符串时回退到跟随系统而不抛异常`() {
-        // 存储值可能来自旧版本或被外部改写，设置损坏不应让应用起不来
-        val preferences = preferencesOf(DataStoreKeys.THEME_MODE to "NOT_A_MODE")
+    fun `主题编号为负数时回退到 0 而不抛异常`() {
+        // 存储值可能被外部改写；负数不是合法的配色编号，回退到默认而不是让应用起不来。
+        // 越界的正数（如 99）这里原样读出，由 `ThemePalettes.byId` 负责回退 —— 兜底只做一次。
+        val preferences = preferencesOf(DataStoreKeys.THEME_PALETTE_ID to -1)
 
-        assertEquals(ThemeMode.SYSTEM, PreferencesMapping.readSettings(preferences).themeMode)
+        assertEquals(0, PreferencesMapping.readSettings(preferences).themePaletteId)
     }
 
     // ============================================================ 进度

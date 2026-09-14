@@ -2,7 +2,6 @@ package com.ldxy.lianliankan.data
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 
 /**
  * DataStore 键定义，逐条对应 SRS 7.2「数据字典」。
@@ -18,7 +17,15 @@ internal object DataStoreKeys {
     // ---- 设置 ----
     val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
     val VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
-    val THEME_MODE = stringPreferencesKey("theme_mode")
+
+    /**
+     * 主题配色编号（SRS FR-11.3）。
+     *
+     * V1.3 起以本键取代旧的字符串键 `theme_mode`：**旧键直接弃用、不做数据迁移** ——
+     * 读不到就是默认的第 0 套配色，用户重选一次主题无成本，而为一次性升级写迁移代码
+     * 是长期负担（旧值 `"SYSTEM"` 之类的语义在新方案下也没有对应物）。
+     */
+    val THEME_PALETTE_ID = intPreferencesKey("theme_palette_id")
     val SKIN_ID = intPreferencesKey("skin_id")
 
     // ---- 进度 ----

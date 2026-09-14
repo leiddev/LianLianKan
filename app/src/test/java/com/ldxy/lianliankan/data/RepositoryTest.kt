@@ -1,7 +1,6 @@
 package com.ldxy.lianliankan.data
 
 import com.ldxy.lianliankan.domain.config.LevelCatalog
-import com.ldxy.lianliankan.domain.model.ThemeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.resetMain
@@ -106,7 +105,7 @@ class RepositoryTest {
 
         assertTrue("音效默认开启", settings.soundEnabled)
         assertTrue("振动默认开启", settings.vibrationEnabled)
-        assertEquals(ThemeMode.SYSTEM, settings.themeMode)
+        assertEquals("主题默认编号为 0（对应 ThemePalettes.DEFAULT_ID）", 0, settings.themePaletteId)
         assertEquals(0, settings.skinId)
     }
 
@@ -116,23 +115,13 @@ class RepositoryTest {
 
         repository.setSoundEnabled(false)
         repository.setVibrationEnabled(false)
-        repository.setThemeMode(ThemeMode.DARK)
+        repository.setThemePaletteId(2)
         repository.setSkinId(2)
 
         val settings = repository.settings.value
         assertFalse(settings.soundEnabled)
         assertFalse(settings.vibrationEnabled)
-        assertEquals(ThemeMode.DARK, settings.themeMode)
+        assertEquals(2, settings.themePaletteId)
         assertEquals(2, settings.skinId)
-    }
-
-    @Test
-    fun `投影到主题模式时三态取值符合 FR-11-3`() {
-        // ThemeMode 的三态定义本身就是需求的一部分，这里防止后续改动漏项
-        assertEquals(3, ThemeMode.entries.size)
-        assertEquals(
-            listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK),
-            ThemeMode.entries.toList(),
-        )
     }
 }

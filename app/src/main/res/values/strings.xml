@@ -49,10 +49,12 @@
     <!-- 设置（SRS FR-11） -->
     <string name="settings_sound">音效</string>
     <string name="settings_vibration">振动</string>
-    <string name="settings_theme">主题</string>
-    <string name="settings_theme_system">跟随系统</string>
-    <string name="settings_theme_light">浅色</string>
-    <string name="settings_theme_dark">深色</string>
+    <string name="settings_theme_color">主题色</string>
+    <!-- 4 种主题色的名称（SRS FR-11.3 / V1.3） -->
+    <string name="theme_color_blue">浅蓝</string>
+    <string name="theme_color_lime">黄绿</string>
+    <string name="theme_color_pink">玫红</string>
+    <string name="theme_color_amber">琥珀</string>
     <string name="settings_skin">皮肤</string>
     <string name="skin_produce">蔬果</string>
     <string name="skin_animals">动物</string>

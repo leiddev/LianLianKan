@@ -8,7 +8,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ldxy.lianliankan.data.ProgressRepository
 import com.ldxy.lianliankan.data.SettingsRepository
 import com.ldxy.lianliankan.domain.model.Settings
-import com.ldxy.lianliankan.domain.model.ThemeMode
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -32,7 +31,8 @@ class SettingsViewModel(
     fun onVibrationEnabledChange(enabled: Boolean) =
         launch { settingsRepository.setVibrationEnabled(enabled) }
 
-    fun onThemeModeChange(mode: ThemeMode) = launch { settingsRepository.setThemeMode(mode) }
+    /** 主题配色（SRS FR-11.3：V1.3 起是 4 种主题色）。 */
+    fun onThemePaletteChange(id: Int) = launch { settingsRepository.setThemePaletteId(id) }
 
     fun onSkinIdChange(skinId: Int) = launch { settingsRepository.setSkinId(skinId) }
 

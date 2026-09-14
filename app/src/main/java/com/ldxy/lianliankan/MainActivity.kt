@@ -5,10 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -20,7 +18,6 @@ import com.ldxy.lianliankan.data.ProgressRepository
 import com.ldxy.lianliankan.data.SettingsRepository
 import com.ldxy.lianliankan.data.appDataStore
 import com.ldxy.lianliankan.domain.model.Settings
-import com.ldxy.lianliankan.domain.model.ThemeMode
 import com.ldxy.lianliankan.ui.nav.AppNavHost
 import com.ldxy.lianliankan.ui.theme.LianLianKanTheme
 import com.ldxy.lianliankan.ui.theme.appBackgroundBrush
@@ -55,19 +52,19 @@ class MainActivity : ComponentActivity() {
             // 读到真实值后会自动切换到用户设置。
             val settings by settingsRepository.settings
                 .collectAsStateWithLifecycle(initialValue = Settings())
-            val darkTheme = settings.themeMode.resolveDarkTheme()
 
-            // 状态栏图标（时间 / 信号 / 电量）按背景明暗自动切换黑白（I-4）。
-            // 边到边之后状态栏是透明的，露出的是 APP 自己的渐变背景，
-            // 因此「状态栏颜色与 APP 统一」是自动达成的，不需要再设 statusBarColor。
+            // 状态栏图标（时间 / 信号 / 电量）恒为深色（I-4）。
+            // 边到边之后状态栏是透明的，露出的是 APP 自己的渐变背景，因此
+            // 「状态栏颜色与 APP 统一」是自动达成的，不需要再设 statusBarColor。
+            // V1.3 起应用只有浅色配色（4 种主题色都很浅），图标恒为深色才不会与背景糊在一起。
             SideEffect {
                 WindowCompat.getInsetsController(window, window.decorView)
-                    .isAppearanceLightStatusBars = !darkTheme
+                    .isAppearanceLightStatusBars = true
             }
 
             LianLianKanTheme(
-                darkTheme = darkTheme,
-                // 皮肤与主题同样从设置流下来，因此切换后重组即生效（SRS FR-11.6）
+                // 主题配色与皮肤同样从设置流下来，因此切换后重组即生效（SRS FR-11.3 / FR-11.6）
+                paletteId = settings.themePaletteId,
                 skinId = settings.skinId,
             ) {
                 Box(
@@ -84,17 +81,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
-
-/**
- * 主题模式 → 是否使用深色（SRS FR-11.3：跟随系统 / 浅色 / 深色）。
- *
- * 判定放在这里而不是 `Settings` 里，是因为「跟随系统」需要读 Compose 的环境，
- * 而领域模型必须保持为可在 JVM 上单测的纯 Kotlin（SRS NFR-3.1）。
- */
-@Composable
-private fun ThemeMode.resolveDarkTheme(): Boolean = when (this) {
-    ThemeMode.SYSTEM -> isSystemInDarkTheme()
-    ThemeMode.LIGHT -> false
-    ThemeMode.DARK -> true
 }
