@@ -174,7 +174,7 @@ class GameSessionTest {
     // ============================================================ 错误反馈（FR-4.4 / FR-4.5）
 
     @Test
-    fun `图案不同时判为错误并把第二张设为选中且连击归零`() {
+    fun `图案不同时判为错误并清空两张的选中态且连击归零`() {
         val h = fixedHarness("AABB", "CCDD")
         h.session.start()
 
@@ -186,16 +186,45 @@ class GameSessionTest {
 
         // 图案不同 → 错误操作
         h.session.select(at(0, 2))
+        assertEquals("前置条件：第二张点击前第一张应已选中", at(0, 2), h.session.state.selectedPosition)
+
         val wrong = h.session.select(at(1, 2))
 
         assertTrue(wrong is SelectResult.WrongType)
         assertEquals(at(0, 2), (wrong as SelectResult.WrongType).first)
         assertEquals(at(1, 2), wrong.second)
 
-        assertEquals("第二张牌应被设为选中", at(1, 2), h.session.state.selectedPosition)
+        assertNull(
+            "图案不同也应清空选中态，两张都不再选中（V1.1）",
+            h.session.state.selectedPosition,
+        )
+        assertEquals(
+            "两张牌都应回到未选中状态",
+            0,
+            h.session.state.board.remainingTiles().count { it.state != TileState.NORMAL },
+        )
         assertEquals("连击应归零", 0, h.session.state.score.combo)
         assertEquals("得分不应变化", pointsBefore, h.session.state.score.points)
         assertEquals("不应消除任何牌", 6, h.session.state.remainingTiles)
+    }
+
+    @Test
+    fun `两类错误之后的行为一致 - 都回到未选状态`() {
+        // 「图案不同」与「图案相同但连不通」是 AC-07 的两条分支，
+        // V1.1 起二者对选中态的处理必须一致，这里做一次并列断言防止将来只改一边。
+        val wrongType = fixedHarness("AABB", "CCDD")
+        wrongType.session.start()
+        wrongType.session.select(at(0, 0))
+        assertTrue(wrongType.session.select(at(0, 1)) is SelectResult.Eliminated)
+        wrongType.session.select(at(0, 2))
+        assertTrue(wrongType.session.select(at(1, 2)) is SelectResult.WrongType)
+        assertNull("图案不同后不应有选中", wrongType.session.state.selectedPosition)
+
+        val noPath = fixedHarness("ABC", "BAC")
+        noPath.session.start()
+        noPath.session.select(at(0, 0))
+        assertTrue(noPath.session.select(at(1, 1)) is SelectResult.NoPath)
+        assertNull("连不通后不应有选中", noPath.session.state.selectedPosition)
     }
 
     @Test

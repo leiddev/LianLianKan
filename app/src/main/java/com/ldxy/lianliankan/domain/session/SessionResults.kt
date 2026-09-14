@@ -21,7 +21,9 @@ sealed interface SelectResult {
     /**
      * 两张牌图案不同（SRS FR-4.5）。
      *
-     * 视为错误操作：给出错误反馈，并把**第二张**牌设为选中，连击归零（SRS FR-8.3）。
+     * 视为错误操作：给出错误反馈，**清空选中态**（两张都不再选中），连击归零（SRS FR-8.3）。
+     * 与 [NoPath] 行为一致 —— 出错后回到「未选」状态，下一次点击从干净状态开始
+     * （V1.1 改进 I-1 的第二部分；V1.0 及更早是把选中态转移给第二张）。
      */
     data class WrongType(val first: Position, val second: Position) : SelectResult
 

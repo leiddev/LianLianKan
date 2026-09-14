@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -26,15 +29,22 @@ import com.ldxy.lianliankan.R
 import com.ldxy.lianliankan.domain.session.GameState
 
 /**
- * 顶部状态栏（SRS 5.1：倒计时、当前得分、连击）。
+ * 顶部状态栏（SRS 5.1：当前关卡、倒计时、当前得分、连击）。
  *
  * 剩余时间低于 30 秒时整块变红（SRS FR-7.4）。是否告警由领域层的
  * `GameState.isTimeLow` 给出，UI 不重复判定阈值。
+ *
+ * ### 状态栏区域的背景（V1.1 改进）
+ * [contentInsets] 施加在 **Surface 内部的 Row** 上，而不是 Surface 自身 ——
+ * 这样 Surface 的背景色会一直向上铺到屏幕顶端（含状态栏区域），
+ * 而内容仍避开状态栏。若把插边加在 Surface 上，状态栏区域就会露出 APP 的渐变背景，
+ * 与 HUD 形成一条色带。
  */
 @Composable
 fun GameHud(
     state: GameState,
     modifier: Modifier = Modifier,
+    contentInsets: WindowInsets = WindowInsets.statusBars,
 ) {
     val colors = MaterialTheme.colorScheme
     val timeColor by animateColorAsState(
@@ -51,6 +61,7 @@ fun GameHud(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .windowInsetsPadding(contentInsets)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,

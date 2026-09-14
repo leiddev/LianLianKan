@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -164,12 +163,8 @@ fun GameScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 边到边后内容会绘制到状态栏下方，因此 HUD 与底部操作条各自避让系统栏
-            // （V1.1 改进 I-4）。没有这层插边，顶部 HUD 会被状态栏压住。
-            GameHud(
-                state = state,
-                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
-            )
+            // HUD 的背景色向上延伸铺满状态栏区域，插边由 GameHud 内部处理（V1.1 改进 I-4）。
+            GameHud(state = state)
 
             BoxWithConstraints(
                 modifier = Modifier

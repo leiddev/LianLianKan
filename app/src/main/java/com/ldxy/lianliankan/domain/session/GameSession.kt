@@ -122,8 +122,11 @@ class GameSession(
 
         // 图案不同 → 错误操作（FR-4.5）
         if (firstTile.type != tile.type) {
+            // 与「同图案但连不通」保持一致：出错即清空选中态，两张都不再选中。
+            // V1.0 及更早的版本在这里是把选中态转移给第二张（SRS FR-4.5 原文），
+            // V1.1 按验收意见改为清空（见 doc/V1.1改进计划.md 的 I-1）。
             current = snapshot.copy(
-                board = reselect(board, from = selectedPosition, to = position),
+                board = clearSelection(board),
                 score = resetCombo(snapshot.score),
             )
             return SelectResult.WrongType(first = selectedPosition, second = position)
@@ -308,15 +311,6 @@ class GameSession(
 
     /** SRS FR-8.3：错误选中导致连击归零。 */
     private fun resetCombo(score: ScoreState): ScoreState = ScoreEngine.resetCombo(score)
-
-    /** 把 [from] 的选中态转移到 [to]（SRS FR-4.5）。 */
-    private fun reselect(board: Board, from: Position, to: Position): Board {
-        val fromTile = board.tileAt(from) ?: return board
-        val toTile = board.tileAt(to) ?: return board
-        return board
-            .withTile(fromTile.withState(TileState.NORMAL))
-            .withTile(toTile.withState(TileState.SELECTED))
-    }
 
     private fun clearSelection(board: Board): Board =
         board.remainingTiles()
