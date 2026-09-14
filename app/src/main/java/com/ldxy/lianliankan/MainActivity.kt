@@ -65,7 +65,11 @@ class MainActivity : ComponentActivity() {
                     .isAppearanceLightStatusBars = !darkTheme
             }
 
-            LianLianKanTheme(darkTheme = darkTheme) {
+            LianLianKanTheme(
+                darkTheme = darkTheme,
+                // 皮肤与主题同样从设置流下来，因此切换后重组即生效（SRS FR-11.6）
+                skinId = settings.skinId,
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

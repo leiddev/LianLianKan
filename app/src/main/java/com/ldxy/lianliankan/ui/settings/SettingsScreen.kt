@@ -1,15 +1,20 @@
 package com.ldxy.lianliankan.ui.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +36,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ldxy.lianliankan.R
 import com.ldxy.lianliankan.domain.model.ThemeMode
+import com.ldxy.lianliankan.ui.game.TileFaceBox
+import com.ldxy.lianliankan.ui.theme.TileSkin
+import com.ldxy.lianliankan.ui.theme.TileSkins
 
 /**
  * 设置页（SRS FR-11）。
@@ -104,6 +112,25 @@ fun SettingsScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
+            // 皮肤（SRS FR-11.4 / V1.2 的 J-3）。
+            // 刻意不用主题那样的文字单选 —— 皮肤是视觉选择，纯文字等于让玩家盲选。
+            Text(
+                text = stringResource(R.string.settings_skin),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TileSkins.all.forEach { skin ->
+                    SkinCard(
+                        skin = skin,
+                        selected = settings.skinId == skin.id,
+                        onClick = { viewModel.onSkinIdChange(skin.id) },
+                    )
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
             TextButton(
                 onClick = { confirmClear = true },
                 modifier = Modifier.fillMaxWidth(),
@@ -166,3 +193,51 @@ private fun themeModeLabel(mode: ThemeMode): String = stringResource(
         ThemeMode.DARK -> R.string.settings_theme_dark
     },
 )
+
+/**
+ * 一张皮肤卡片：左侧渲染该皮肤的 3 个示例牌面，右侧是皮肤名与选中标记。
+ *
+ * 预览直接复用棋盘的 `TileFaceBox`（V1.2 的 J-1）—— 因此不需要伪造 `Tile` 领域对象，
+ * 也不会出现「预览与实际不一致」。预览牌面不可点击。
+ */
+@Composable
+private fun SkinCard(
+    skin: TileSkin,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) colors.primaryContainer else colors.surfaceVariant,
+        ),
+        border = if (selected) {
+            BorderStroke(2.dp, colors.primary)
+        } else {
+            null
+        },
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = stringResource(skin.nameRes),
+                style = MaterialTheme.typography.titleSmall,
+                color = if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // 取该皮肤的前 3 个图案作为示例
+                skin.faces.take(PREVIEW_FACE_COUNT).forEach { face ->
+                    TileFaceBox(face = face, cellSize = PREVIEW_CELL_SIZE, enabled = false)
+                }
+            }
+        }
+    }
+}
+
+/** 预览卡片里渲染几个示例牌面。 */
+private const val PREVIEW_FACE_COUNT = 3
+
+/** 预览牌面的边长；比棋盘上的格子略小，避免卡片过高。 */
+private val PREVIEW_CELL_SIZE = 44.dp

@@ -30,54 +30,53 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ldxy.lianliankan.domain.model.Tile
 import com.ldxy.lianliankan.domain.model.TileState
+import com.ldxy.lianliankan.ui.theme.LocalTileSkin
 
 /**
- * 单张牌（SRS FR-13.3 / FR-13.4 / FR-13.7）。
+ * 牌面视觉（V1.2 的 J-1）。
  *
- * - 圆角卡片 + 按压缩放反馈（FR-13.3）；
- * - 选中态：主色调底 + 描边 + 外发光（FR-13.4）；
- * - 提示态：第三色调底 + 描边（FR-9.1 的高亮）；
- * - 错误态：红色调（抖动由调用方通过 [modifier] 施加，见 `BoardView`）；
- * - 图案用 emoji 文本渲染，字号随格子边长缩放（FR-13.7）；
- * - [alpha] / [extraScale] 供消除动画（缩放 + 淡出，FR-13.6）驱动。
+ * **只认一个图案字符与一组状态标志，完全不依赖 `Tile`** —— 这样设置页的皮肤预览可以
+ * 直接复用它渲染示例牌面，不必伪造 `Tile` 领域对象；预览与棋盘共用同一段视觉代码，
+ * 也就不会出现「预览好看、实际不一样」。
  *
- * 牌面元素不参与语义树的具体图案信息，只暴露坐标描述，避免读屏时泄露图案导致「作弊」，
- * 同时保留可定位性。
+ * 这里承载**全部**牌面视觉（外发光、卡片底、描边、图案、按压反馈）；
+ * [TileView] 只是一层把 `Tile` 翻译成 [face] 与状态标志的薄适配层。
+ *
+ * 状态标志之所以是入参而非从 `Tile` 推导，正是因为预览场景没有 `Tile`。
  */
 @Composable
-fun TileView(
-    tile: Tile,
+fun TileFaceBox(
+    face: String,
     cellSize: Dp,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    isSelected: Boolean = false,
+    isHinted: Boolean = false,
     isRejected: Boolean = false,
     alpha: Float = 1f,
     extraScale: Float = 1f,
+    onClick: () -> Unit = {},
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
 
-    val isSelected = tile.state == TileState.SELECTED
-    val isHinted = tile.state == TileState.HINTED
-
-    val colors = MaterialTheme.colorScheme
+    val palette = MaterialTheme.colorScheme
     val container = when {
-        isRejected -> colors.errorContainer
-        isSelected -> colors.primaryContainer
-        isHinted -> colors.tertiaryContainer
-        else -> colors.surfaceVariant
+        isRejected -> palette.errorContainer
+        isSelected -> palette.primaryContainer
+        isHinted -> palette.tertiaryContainer
+        else -> palette.surfaceVariant
     }
     val content = when {
-        isRejected -> colors.onErrorContainer
-        isSelected -> colors.onPrimaryContainer
-        isHinted -> colors.onTertiaryContainer
-        else -> colors.onSurfaceVariant
+        isRejected -> palette.onErrorContainer
+        isSelected -> palette.onPrimaryContainer
+        isHinted -> palette.onTertiaryContainer
+        else -> palette.onSurfaceVariant
     }
     val accent = when {
-        isRejected -> colors.error
-        isSelected -> colors.primary
-        isHinted -> colors.tertiary
+        isRejected -> palette.error
+        isSelected -> palette.primary
+        isHinted -> palette.tertiary
         else -> Color.Transparent
     }
 
@@ -131,16 +130,49 @@ fun TileView(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            val density = LocalDensity.current
             Text(
-                text = TileFaces.faceFor(tile.type),
-                fontSize = with(density) { (cellSize * 0.42f).toSp() },
+                text = face,
+                fontSize = with(LocalDensity.current) { (cellSize * 0.42f).toSp() },
                 fontWeight = FontWeight.Medium,
                 color = content,
-                modifier = Modifier.semantics {
-                    contentDescription = "tile-${tile.row}-${tile.col}"
-                },
+                modifier = Modifier.semantics { contentDescription = face },
             )
         }
     }
+}
+
+/**
+ * 棋盘上的一张牌（SRS FR-13.3 / FR-13.4 / FR-13.7）。
+ *
+ * 只做两件事：把 `Tile.state` 翻译成状态标志、从 [LocalTileSkin] 解析出图案字符，
+ * 然后交给 [TileFaceBox]。所有视觉都在后者。
+ *
+ * 图案取自当前皮肤，因此设置页切换皮肤后棋盘会立即跟着变（SRS FR-11.6）。
+ *
+ * 语义描述只用图案字符本身，**不暴露坐标** —— 读屏时泄露行列信息对这类游戏没有帮助，
+ * 而图案字符是玩家本来就能看到的内容。
+ */
+@Composable
+fun TileView(
+    tile: Tile,
+    cellSize: Dp,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isRejected: Boolean = false,
+    alpha: Float = 1f,
+    extraScale: Float = 1f,
+) {
+    TileFaceBox(
+        face = LocalTileSkin.current.faceAt(tile.type),
+        cellSize = cellSize,
+        modifier = modifier,
+        enabled = enabled,
+        isSelected = tile.state == TileState.SELECTED,
+        isHinted = tile.state == TileState.HINTED,
+        isRejected = isRejected,
+        alpha = alpha,
+        extraScale = extraScale,
+        onClick = onClick,
+    )
 }

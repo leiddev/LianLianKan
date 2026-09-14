@@ -53,6 +53,10 @@
     <string name="settings_theme_system">跟随系统</string>
     <string name="settings_theme_light">浅色</string>
     <string name="settings_theme_dark">深色</string>
+    <string name="settings_skin">皮肤</string>
+    <string name="skin_produce">蔬果</string>
+    <string name="skin_animals">动物</string>
+    <string name="skin_symbols">符号</string>
     <string name="settings_clear_progress">清除进度</string>
     <string name="settings_clear_progress_confirm">将清空全部关卡解锁状态与最佳成绩，且无法恢复。确定继续吗？</string>
 
