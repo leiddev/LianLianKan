@@ -75,6 +75,9 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
 
+    // 标准 M3 色调板算法，用于从种子色生成 4 套主题配色（V1.3）
+    implementation(libs.material.color.utilities)
+
     // Compose：版本由 BOM 统一管理，各 Compose 构件不再单独写版本号
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)

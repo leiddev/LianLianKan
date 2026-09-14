@@ -19,6 +19,12 @@ coroutines = "1.11.0"
 
 coreKtx = "1.19.0"
 
+# --- 配色生成（V1.3）---
+# 标准 M3 色调板算法。官方 material-color-utilities 未发布到 Maven Central，
+# 这里用 me.tatarka 对 Google 官方源码的原样转发（已下载 jar 核对 API：
+# Hct / TonalPalette / SchemeContent / SchemeTonalSpot / DynamicScheme 齐全，纯 JVM 无传递依赖）。
+materialColorUtilities = "0.1.2"
+
 # --- 测试 ---
 junit = "4.13.2"
 junitVersion = "1.1.5"
@@ -26,6 +32,9 @@ espressoCore = "3.5.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+
+# 配色生成（V1.3）
+material-color-utilities = { group = "me.tatarka.google.material", name = "material-color-utilities", version.ref = "materialColorUtilities" }
 
 # Compose（版本由 BOM 统一管理）
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
