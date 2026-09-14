@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
@@ -118,6 +119,11 @@ private fun HudItem(
  *
  * 道具次数用尽时按钮置灰且不可点击（SRS FR-9.3）—— 可用性直接取自 `GameState`，
  * 不在 UI 侧重算。
+ *
+ * ### 导航栏区域的背景
+ * 与 [GameHud] 同理：[contentInsets] 施加在 **Surface 内部的 Row** 上，
+ * 使 Surface 背景一直向下铺到屏幕底端（含导航栏区域），内容仍避开系统栏。
+ * 若把插边加在 Surface 上，导航栏区域会露出 APP 的渐变背景，与操作条形成色带。
  */
 @Composable
 fun GameActionBar(
@@ -126,6 +132,7 @@ fun GameActionBar(
     onShuffleClick: () -> Unit,
     onPauseClick: () -> Unit,
     modifier: Modifier = Modifier,
+    contentInsets: WindowInsets = WindowInsets.navigationBars,
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -135,6 +142,7 @@ fun GameActionBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .windowInsetsPadding(contentInsets)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,

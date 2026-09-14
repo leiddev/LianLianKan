@@ -6,13 +6,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -235,7 +232,6 @@ fun GameScreen(
                 onHintClick = viewModel::onHintClick,
                 onShuffleClick = viewModel::onShuffleClick,
                 onPauseClick = viewModel::onPauseClick,
-                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
             )
         }
 
