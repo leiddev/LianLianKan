@@ -6,11 +6,11 @@ plugins {
 }
 
 /**
- * release 绛惧悕淇℃伅浠?local.properties 璇诲彇锛堣鏂囦欢宸茶 .gitignore 鎺掗櫎锛夛紝
- * 鍥犳瀵嗛挜涓庡瘑鐮佷笉浼氳繘鍏ョ増鏈簱銆?
+ * release 签名信息从 local.properties 读取（该文件已被 .gitignore 排除），
+ * 因此密钥与密码不会进入版本库。
  *
- * 缂哄け鏃?release 鏋勫缓浼氶€€鍖栦负鏈鍚嶏紝`assembleDebug` 涓庡崟娴嬩笉鍙楀奖鍝?鈥斺€?
- * 杩欒銆屾病鏈夊瘑閽ョ殑浜轰篃鑳借窇娴嬭瘯銆嶄笌銆屾湁瀵嗛挜鐨勪汉鑳藉嚭姝ｅ紡鍖呫€嶄袱浠朵簨浜掍笉骞叉壈銆?
+ * 缺失时 release 构建会退化为未签名，`assembleDebug` 与单测不受影响——
+ * 这让「没有密钥的人也能跑测试」与「有密钥的人能出正式包」两件事互不干扰。
  */
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("local.properties")
@@ -53,8 +53,8 @@ android {
     buildTypes {
         release {
             optimization {
-                // 淇濇寔鍏抽棴锛歊8 闇€瑕佺湡鏈哄洖褰掓墠鑳界‘璁?keep 瑙勫垯瀹屾暣锛?
-                // 鑰屾湰椤圭洰褰撳墠娌℃湁鍙敤鐨勮澶?妯℃嫙鍣ㄩ獙璇侀€氶亾锛堣寮€鍙戣鍒掔 7 鑺傦級銆?
+                // 保持关闭：R8 需要真机回归才能确认 keep 规则完整，
+                // 而本项目当前没有可用的设备/模拟器验证通道（见开发计划第 7 节）。
                 enable = false
             }
             if (hasReleaseSigning) {
@@ -81,15 +81,15 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
 
-    // 鍚姩鐢婚潰锛圴1.4锛夛細鍐峰惎鍔ㄦ椂鐢ㄥ搧鐗屽簳鑹?+ 鍝佺墝鍥炬爣椤舵帀骞冲彴榛樿鐧藉睆锛?
-    // 骞舵敮鎸併€岃缃瀹屼箣鍓嶄笉鏀捐銆嶏紙瑙?MainActivity 涓?values/themes.xml锛?
+    // 启动画面（V1.4）：冷启动时用品牌底色 + 品牌图标顶掉平台默认白屏，
+    // 并支持「设置读完之前不放行」（见 MainActivity 与 values/themes.xml）。
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.kotlinx.coroutines.android)
 
-    // 鏍囧噯 M3 鑹茶皟鏉跨畻娉曪紝鐢ㄤ簬浠庣瀛愯壊鐢熸垚 4 濂椾富棰橀厤鑹诧紙V1.3锛?
+    // 标准 M3 色调板算法，用于从种子色生成 4 套主题配色（V1.3）。
     implementation(libs.material.color.utilities)
 
-    // Compose锛氱増鏈敱 BOM 缁熶竴绠＄悊锛屽悇 Compose 鏋勪欢涓嶅啀鍗曠嫭鍐欑増鏈彿
+    // Compose：版本由 BOM 统一管理，各 Compose 组件不再单独写版本号
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     implementation(libs.androidx.ui)
@@ -104,14 +104,14 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.navigation.compose)
 
-    // 鏈湴鎸佷箙鍖栵紙FR-14锛?
+    // 本地持久化（FR-14）。
     implementation(libs.androidx.datastore.preferences)
 
-    // 鍗曞厓娴嬭瘯锛堥鍩熷眰涓诲姏锛孲RS NFR-3.1锛?
+    // 单元测试（领域层主力，SRS NFR-3.1）。
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 
-    // 浠櫒娴嬭瘯
+    // 仪器测试
     androidTestImplementation(composeBom)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
