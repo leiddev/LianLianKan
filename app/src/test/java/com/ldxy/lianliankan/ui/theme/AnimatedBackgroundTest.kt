@@ -6,11 +6,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
+import kotlin.math.pow
 
 /**
  * 动态背景的约束不变量测试（V1.5；修订 2 重写）。
  *
- * ### 这份测试改过三次，每次都是被真机打回来的
+ * ### 这份测试改过四次，每次都是被真机打回来的
  * 1. **修订 0 的 6 条断言全部通过，而真机「完全看不出背景在动」。** 原因是断言测的是**配方**
  *    （透明度 ≤ 0.08、周期 ≥ 20 s、用色是中性角色），而「看得见」取决于**成品** ——
  *    合成后的像素差 = 透明度 ×（底色 − 光斑色）。当时的光斑色与底色的差只有 29 / 57 级，
@@ -23,13 +24,17 @@ import kotlin.math.abs
  *    这条**时钟断言**，以及把时钟改成自己数帧的实现。
  * 3. **修订 2 的 9 条断言全部通过，而真机「还是没观察到」。** 最终靠**给设备装探针**
  *    （在画布上画洋红标记 + 屏幕上显示读数）才定位：这一层一直在正常绘制、位置正确、时钟
- *    也在走 —— 只是浓度太低，真机上根本注意不到。把同一套绘制代码的透明度放大 3 倍后，
- *    开发者立刻看到了「几大团浅灰色暗区」。
+ *    也在走 —— 只是浓度太低，真机上根本注意不到。→ 于是可见性下界改成了取自**真机实测的
+ *    两个锚点之间**（26 级看不见 / 78 级看得清），而不是取自推算；度量也从「最大单通道差」
+ *    换成「相对亮度差」，因为前者会把「色相变化大、明暗几乎没变」的色块算成很显眼。
+ * 4. **修订 3 达标之后，真机的评价是「灰色光斑太难看」。** 可见性解决了，**观感**成了问题。
+ *    → 于是光斑改用主题色（`primary` / `tertiary`），并新增
+ *    `背景用色必须取自主题色 - 不得退化成灰` 把「不许再退回灰色」钉成断言。
  *
- * 三次的共同教训逐层递进：**测试要盯住「外部可观察的结果」（第 1 次），
- * 要覆盖「时钟」而不只是「数值」（第 2 次），而「看得见」这类感知判据的阈值
- * 只能由真机 A/B 确定、不能由本机计算拍板（第 3 次）。**
- * 因此下界 [MIN_VISIBLE_DELTA] 现在**取自真机实测的两个锚点之间**，而不是取自推算。
+ * 四次的教训逐层递进：**测试要盯住「外部可观察的结果」（第 1 次）、要覆盖「时钟」而不只是
+ * 「数值」（第 2 次）、感知阈值只能由真机 A/B 确定而不能由本机计算拍板（第 3 次）、
+ * 而「可见」与「好看」是两件事（第 4 次）。最后一条尤其提醒：单测能守住「不低于某条线」，
+ * 守不住「好不好看」—— 后者只能靠真机判断，但**可以把「已经否掉的做法」写成断言防止回退**。
  *
  * ### 为什么这里的上下限是字面量，而不用生产代码里的常量
  * 若断言写成 `spec.maxAlpha <= MAX_ALPHA`，那么把 `MAX_ALPHA` 改成 0.5 也会通过 ——
@@ -57,51 +62,59 @@ class AnimatedBackgroundTest {
         const val MIN_RISE_MILLIS = 15_000
 
         /**
-         * 可见性区间（**成品指标**，单位：0~255 的单通道差）。
+         * 可见性区间（**成品指标**：合成色与底色的 WCAG 相对亮度差，单位 0~255）。
          *
-         * 下界 30（约 12%）：真机实测的下限参考 —— 峰值差 16~26 级（6~10%）时开发者
-         * **看不出**，46~75 级（18~30%）时**看得很清楚**。因此把下界钉在这两者之间偏上处，
-         * 让「又调回看不见的量级」这件事必然让测试变红。
-         * 上界 85（约 33%）：再高就会从「氛围」变成「画面上有东西」。
+         * 两个锚点都是真机实测换算到同一刻度上的：
+         * **明暗差约 52 级 → 看不出**（修订 2 最强的那一路），
+         * **约 137~140 级 → 看得很清楚**（诊断版与修订 3，后者开发者还就颜色提了意见，说明确实看见了）。
+         * 下界 100 取在两者之间、偏向可见的一侧：不允许再退回「看不见」的量级。
+         * 上界 175：再高就会从「氛围」变成「画面上有东西」。
          */
-        const val MIN_VISIBLE_DELTA = 30.0
-        const val MAX_VISIBLE_DELTA = 85.0
+        const val MIN_VISIBLE_DELTA = 100.0
+        const val MAX_VISIBLE_DELTA = 175.0
+
+        /**
+         * 合成后必须保留的最小**色相**（最大通道 − 最小通道，0~255）。
+         *
+         * 这条是为「修订 4」加的：修订 3 的中性灰光斑在真机上的评价是「太难看」。
+         * 灰色的通道极差只有约 5 级，而主题色的薄雾实测有 22~77 级，两者可以干净地分开。
+         */
+        const val MIN_CHROMA_SPREAD = 18.0
     }
 
-    /** 承载游戏语义的强调色角色，背景一律不得取用（计划 §3 最后一条 / 风险 R-1）。 */
-    private fun semanticAccentRoles(colors: ColorScheme): Map<String, Color> = mapOf(
-        "primary（选中）" to colors.primary,
-        "onPrimary" to colors.onPrimary,
-        "primaryContainer（选中牌的底色）" to colors.primaryContainer,
-        "onPrimaryContainer" to colors.onPrimaryContainer,
-        "tertiary（提示）" to colors.tertiary,
-        "onTertiary" to colors.onTertiary,
-        "tertiaryContainer（提示牌的底色）" to colors.tertiaryContainer,
-        "onTertiaryContainer" to colors.onTertiaryContainer,
-        "error（错误）" to colors.error,
-        "onError" to colors.onError,
-        "errorContainer（错误牌的底色）" to colors.errorContainer,
-        "onErrorContainer" to colors.onErrorContainer,
-    )
+    /**
+     * WCAG 2.1 相对亮度（0~1，含 sRGB 去 gamma），与 `ThemePaletteContrastTest` 同一套公式。
+     *
+     * 「看得见吗」最终问的是**明暗**差，所以可见性断言用它而不是单通道差 ——
+     * 单通道差会把「色相变化大但明暗几乎没变」的色块算成很显眼，那正是修订 3 之前
+     * 判断失误的地方之一。
+     */
+    private fun relativeLuminance(c: Color): Double {
+        fun lin(v: Float): Double {
+            val d = v.toDouble()
+            return if (d <= 0.03928) d / 12.92 else ((d + 0.055) / 1.055).pow(2.4)
+        }
+        return 0.2126 * lin(c.red) + 0.7152 * lin(c.green) + 0.0722 * lin(c.blue)
+    }
 
-    /** 两个颜色之间最大的单通道差，0~255。 */
-    private fun channelDelta(a: Color, b: Color): Double = maxOf(
-        abs(a.red - b.red),
-        abs(a.green - b.green),
-        abs(a.blue - b.blue),
-    ) * 255.0
+    /** 相对亮度差，换算到 0~255 的刻度，便于与真机实测的「级」对齐。 */
+    private fun luminanceDelta(a: Color, b: Color): Double =
+        abs(relativeLuminance(a) - relativeLuminance(b)) * 255.0
+
+    /** 色相强度：最大通道 − 最小通道，0~255。灰的它接近 0。 */
+    private fun chromaSpread(c: Color): Double =
+        (maxOf(c.red, c.green, c.blue) - minOf(c.red, c.green, c.blue)) * 255.0
 
     /**
-     * 基底竖向渐变的两个端点色（见 `appBackgroundBrush`）。
+     * 光斑叠加的**基准底色**。
      *
-     * 光斑会被叠在这条渐变的任意位置上，因此可见性必须**在两端都成立**：
-     * 上端是 `background`，下端是 `surfaceVariant`。只测 `background`（较亮、像素差更大）
-     * 会高估可见性。
+     * 只取 `background` 这一个：它是屏幕上方与中部的主要底色，也是渐变最亮的一端；
+     * 渐变下端实测只比它暗 26 级（`#E9EEF1` 对 `#F8F9FC`），会让差值下降约 13%
+     * （实测 107 → 93），这一档已经算在下界的余量里（见 [MIN_VISIBLE_DELTA]）。
+     * 不用 `surfaceVariant` 当参照：它自身的通道极差就有 15 级，会把「色相」断言
+     * 变成一条永远通过的空断言。
      */
-    private fun baseColorExtremes(colors: ColorScheme): Map<String, Color> = mapOf(
-        "渐变的亮端（background）" to colors.background,
-        "渐变的暗端（surfaceVariant）" to colors.surfaceVariant,
-    )
+    private fun baseColor(colors: ColorScheme): Color = colors.background
 
     // ==================================================== 时钟（修订 2 新增，对应第二次真机返工）
 
@@ -210,27 +223,85 @@ class AnimatedBackgroundTest {
             val orbColors = backgroundOrbColors(colors)
             assertTrue("主题 ${palette.id} 的背景用色不应为空", orbColors.isNotEmpty())
 
-            for ((baseLabel, base) in baseColorExtremes(colors)) {
-                for (index in 0 until spec.orbCount) {
-                    val orb = orbColors[index % orbColors.size]
-                    val alpha = backgroundOrbPeakAlpha(spec, index)
-                    val composite = backgroundOrbComposite(base, orb, alpha)
-                    val delta = channelDelta(base, composite)
+            val base = baseColor(colors)
+            for (index in 0 until spec.orbCount) {
+                val orb = orbColors[index % orbColors.size]
+                val alpha = backgroundOrbPeakAlpha(spec, index)
+                val composite = backgroundOrbComposite(base, orb, alpha)
+                val delta = luminanceDelta(base, composite)
 
+                assertTrue(
+                    "主题 ${palette.id} / 第 $index 个光斑：" +
+                        "峰值处的明暗差只有 ${"%.2f".format(delta)} 级（透明度 $alpha，" +
+                        "光斑色 $orb），低于可见下界 $MIN_VISIBLE_DELTA 级 —— " +
+                        "真机实测约 52 级时看不出，这个量级有重蹈覆辙的风险",
+                    delta >= MIN_VISIBLE_DELTA,
+                )
+                assertTrue(
+                    "主题 ${palette.id} / 第 $index 个光斑：" +
+                        "峰值处的明暗差 ${"%.2f".format(delta)} 级超过上界 $MAX_VISIBLE_DELTA 级 —— " +
+                        "背景会从「氛围」变成「画面上有东西」",
+                    delta <= MAX_VISIBLE_DELTA,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `背景用色必须取自主题色 - 不得退化成灰`() {
+        // 修订 4：光斑颜色由中性灰改为主题色。这条断言把两边都钉住 ——
+        // 既不能改成别的角色（例如又退回某个中性角色），也不能「看起来还是灰的」。
+        val spec = DefaultBackgroundSpec
+        for (palette in ThemePalettes.all) {
+            val colors = palette.light
+            val orbColors = backgroundOrbColors(colors)
+            assertTrue("主题 ${palette.id} 的背景用色不应为空", orbColors.isNotEmpty())
+
+            // ① 只允许三个强调色角色：它们都是 tone 40，与底色差 213~215 级，
+            //    既保证了明暗差（见上一条断言），合成后又必然带色相。
+            val allowed = mapOf(
+                "primary" to colors.primary,
+                "secondary" to colors.secondary,
+                "tertiary" to colors.tertiary,
+            )
+            for (orbColor in orbColors) {
+                assertTrue(
+                    "主题 ${palette.id} 的背景用色 $orbColor 不是主题色" +
+                        "（应为 primary / secondary / tertiary 之一：${allowed.keys}）",
+                    orbColor in allowed.values,
+                )
+            }
+
+            // ② error 系一律禁止：红色在连连看里就是「错误」的语义色（FR-4.4 / FR-4.5），
+            //    背景飘红云会被玩家读成出错。
+            val forbidden = mapOf(
+                "error" to colors.error,
+                "errorContainer" to colors.errorContainer,
+                "onError" to colors.onError,
+                "onErrorContainer" to colors.onErrorContainer,
+            )
+            for ((role, accent) in forbidden) {
+                for (orbColor in orbColors) {
                     assertTrue(
-                        "主题 ${palette.id} / $baseLabel / 第 $index 个光斑：" +
-                            "峰值处的像素差只有 ${"%.2f".format(delta)} 级（透明度 $alpha，" +
-                            "光斑色 $orb），低于可见下界 $MIN_VISIBLE_DELTA 级 —— " +
-                            "光斑在数学上就看不见，真机上也一定看不见",
-                        delta >= MIN_VISIBLE_DELTA,
-                    )
-                    assertTrue(
-                        "主题 ${palette.id} / $baseLabel / 第 $index 个光斑：" +
-                            "峰值处的像素差 ${"%.2f".format(delta)} 级超过上界 $MAX_VISIBLE_DELTA 级 —— " +
-                            "背景会从「氛围」变成「画面上有东西」，并削弱棋盘上牌与背景的边界",
-                        delta <= MAX_VISIBLE_DELTA,
+                        "主题 ${palette.id} 的背景用色 $orbColor 与 $role 取到了同一个值：" +
+                            "背景不得使用「错误」语义色",
+                        orbColor != accent,
                     )
                 }
+            }
+
+            // ③ 合成之后必须仍然看得出颜色（以 background 为底，它是近乎中性的）。
+            for (index in 0 until spec.orbCount) {
+                val orb = orbColors[index % orbColors.size]
+                val alpha = backgroundOrbPeakAlpha(spec, index)
+                val composite = backgroundOrbComposite(colors.background, orb, alpha)
+                val spread = chromaSpread(composite)
+                assertTrue(
+                    "主题 ${palette.id} / 第 $index 个光斑：合成色 $composite 的通道极差只有 " +
+                        "${"%.1f".format(spread)} 级（门槛 $MIN_CHROMA_SPREAD）—— " +
+                        "看上去仍是一片灰，而开发者已经明确否掉了灰色光斑",
+                    spread >= MIN_CHROMA_SPREAD,
+                )
             }
         }
     }
@@ -318,30 +389,6 @@ class AnimatedBackgroundTest {
             for (index in -2..spec.orbCount + 1) {
                 val radius = backgroundOrbRadius(spec, index)
                 assertTrue("$label：序号 $index 的半径比例 $radius 越出区间 $range", radius in range)
-            }
-        }
-    }
-
-    @Test
-    fun `背景用色不含承载游戏语义的强调色`() {
-        // 计划 §3 最后一条 / 风险 R-1。
-        // primary 承载「选中」、tertiary 承载「提示」、error 承载「错误」，而三个 *Container
-        // 角色正是牌的底色（见 TileFaceBox）—— 背景若从这些角色取色，会直接削弱棋盘上的
-        // 状态信号与牌的辨识度。
-        for (palette in ThemePalettes.all) {
-            val colors = palette.light
-            val orbColors = backgroundOrbColors(colors)
-            assertTrue("主题 ${palette.id} 的背景用色不应为空", orbColors.isNotEmpty())
-
-            val accents = semanticAccentRoles(colors)
-            for ((role, accent) in accents) {
-                for (orbColor in orbColors) {
-                    assertTrue(
-                        "主题 ${palette.id} 的背景用色 $orbColor 与强调色 $role 取到了同一个值：" +
-                            "背景不得使用承载游戏语义的颜色",
-                        orbColor != accent,
-                    )
-                }
             }
         }
     }
