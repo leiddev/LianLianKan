@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
@@ -24,8 +23,6 @@ import com.ldxy.lianliankan.domain.model.Settings
 import com.ldxy.lianliankan.ui.SplashGate
 import com.ldxy.lianliankan.ui.nav.AppNavHost
 import com.ldxy.lianliankan.ui.theme.AnimatedBackground
-import com.ldxy.lianliankan.ui.theme.BACKGROUND_DIAGNOSTIC
-import com.ldxy.lianliankan.ui.theme.BackgroundDiagnosticOverlay
 import com.ldxy.lianliankan.ui.theme.LianLianKanTheme
 import kotlinx.coroutines.launch
 
@@ -125,14 +122,6 @@ class MainActivity : ComponentActivity() {
                         progressRepository = progressRepository,
                         onExitApp = { finish() },
                     )
-
-                    // ⚠️ 临时诊断叠加层（V1.5 排查用）：必须在**最后一个**子级 —— 它要能在
-                    // 背景层被任何东西盖住时仍然可见。确诊后连同 BackgroundDiagnostic.kt 一起删除。
-                    if (BACKGROUND_DIAGNOSTIC) {
-                        BackgroundDiagnosticOverlay(
-                            modifier = Modifier.align(Alignment.TopStart),
-                        )
-                    }
                 }
             }
         }

@@ -15,10 +15,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -93,7 +91,7 @@ data class BackgroundSpec(
 /**
  * 实际使用的背景参数。
  *
- * ### 为什么透明度是 0.13，而不是初版的 0.055
+ * ### 为什么透明度从 0.055 一路改到 0.36
  * 初版把透明度上限定在 0.08，并取了 0.055「留出余量」。真机反馈是**完全看不出背景在动**，
  * 复盘发现这个约束本身立错了地方：**「看得见」由合成后的像素差决定，而像素差 = 透明度 ×
  * （底色 − 光斑色）**。初版的光斑色取 `surfaceVariant`（#DBE4EA）与 `outlineVariant`（#BFC8CE），
@@ -103,32 +101,56 @@ data class BackgroundSpec(
  *
  * 因此改为**用像素差来定约束**：先定「每个光斑的峰值像素差应落在可见区间」，
  * 再由它反推透明度与用色。这条像素差约束被单测逐主题色钉住，而透明度上限只是它的副产品。
+ * （**注意**：这一步是必要的，但**并不充分** —— 像素差只是必要条件，真正的阈值要靠真机定，
+ * 见下一节。）
  *
- * ### 为什么 修订 2 把 0.10 又调到 0.13
- * 修订 1 的 0.10 是在「动画推进正常」的前提下算出来的，而真机上动画压根没推进，
- * 于是「到底够不够显眼」这个问题在两轮反馈里都没有得到验证。修订 2 取到区间偏浓的一端
- * （与参照实现 `FloatingOrbs` 在深色底上的量级相当），**先把「看得见」这件事确认下来**，
- * 再回落。回落只需要改这一个数：0.10~0.11 是推荐的日常值。
+ * ### 为什么最终是 0.36 —— 一次被真机推翻三次的定值过程
+ * 历代取值与真机结果：
+ *
+ * | 版本 | 峰值透明度 | 峰值像素差 | 真机结果 |
+ * |---|---|---|---|
+ * | 修订 0 | 0.055 | **1~2 级（0.5%）** | 完全看不出（光斑色本身就贴近底色，乘法之后几乎为零） |
+ * | 修订 1 | 0.10 | 15~20 级（6~8%） | 看不出 |
+ * | 修订 2 | 0.13 | 16~26 级（6~10%） | 看不出 |
+ * | 诊断版 | **0.39** | 46~75 级（18~30%） | **看得很清楚**，且是开发者认可的「几大团浅灰色暗区」 |
+ *
+ * 前三版都错在同一件事上：**把「可见性」当成了一个可以纯靠算术拍板的量。**
+ * 「像素差 ≥ N 级就能看见」在本机复算里看着很合理，但那是**静态图像**的判据；
+ * 真实场景是「一大块边缘极柔、移动极慢的浅灰」，人眼对它的敏感度远低于对一张图里
+ * 一块均匀色斑的敏感度，何况玩家正在扫视棋盘找牌、注意力根本不在背景上。
+ * 结论：**这类「氛围型」视觉参数的验收判据只能是真机 A/B，不能是计算值。**
+ * 诊断版（把同一套绘制代码的透明度放大 3 倍）就是那次 A/B —— 它同时证明了
+ * 「这一层在画」「位置正确」「时钟在走」，把变量收敛到了浓度这一个维度上。
+ *
+ * 因此本版直接采用**已被真机证实可见的量级**（0.36，即诊断版 0.39 的 0.92 倍），
+ * 而不是再往下试探一次。浓度是**唯一**的调节旋钮，改这一个数即可：
+ * 嫌太浓/干扰找牌 → 降到 0.18~0.24；仍嫌太淡 → 升到 0.39（诊断版已证实可见）。
  *
  * | 参数 | 取值 | 依据 |
  * |---|---|---|
  * | 数量 | 4 | 参照实现是 3 个；4 个能在 360dp 宽屏上铺开又不至于是「一堆圆点」。上浮周期与初始相位都互不相同，所以不会整齐划一地移动 |
- * | 峰值透明度 | 0.13 | 乘以用色与底色的差（223~226 级 / 184~193 级）得到峰值像素差 **16~26 级（约 6~10%）**。上限 0.15（[MAX_ALPHA]）留出上调余地 |
+ * | 峰值透明度 | 0.36 | 见上表。乘以用色与底色的差（223~226 级 / 184~193 级）得到峰值像素差 **45~72 级（约 18~28%）**，与诊断版同量级。上限 0.45（[MAX_ALPHA]）留出上调余地 |
  * | 上浮周期 | 20 000 ms | 参照实现是 10/12/14 s，本项目放慢到 17~29 s：仍能一眼看出在动，但不至于抢走找牌时的注意力。下限 15 s（[MIN_RISE_MILLIS]） |
  * | 半径 | 0.22 ~ 0.34 | 相对**短边**（竖屏即屏宽）。参照实现是 0.24~0.36。刻意**不做**成覆盖半屏的巨大光斑：光斑越大，同一时刻被压暗的面积越大，棋盘上「牌与背景的边界」被削弱的范围也越大（Q2 = B 没有底板，这是该决策唯一的风险点） |
+ *
+ * **关于棋盘的边界感**（浓度提高后重新核对过）：未选中的牌是 `surfaceVariant`（#DBE4EA，219 级），
+ * 而背景在光斑中心会被压到约 248 − 0.36 × 223 ≈ 168 级 —— **比牌更暗**，所以牌是「浅色的方块
+ * 浮在暗云上」，边界反而更清楚。真正会削弱边界的是「背景恰好被压到与牌同亮度」的那一圈
+ * （透明度约 0.13 处），它随光斑缓慢移动。这一圈无法消除（径向渐变的必经之处），
+ * 只能通过降低峰值透明度让它更靠外、更弱。
  *
  * 上浮的起止位置、摆动幅度、呼吸深度等不出现在本对象里：它们不影响上面任何一条约束，
  * 放进来只会让「哪些数字是被单测保护的」变得含糊。
  */
 val DefaultBackgroundSpec = BackgroundSpec(
     orbCount = 4,
-    maxAlpha = 0.13,
+    maxAlpha = 0.36,
     riseMillis = 20_000,
     radiusRange = 0.22..0.34,
 )
 
-/** 透明度上限（计划 §3；见 [DefaultBackgroundSpec] 的说明）。 */
-const val MAX_ALPHA = 0.15
+/** 透明度上限（见 [DefaultBackgroundSpec] 的说明）。 */
+const val MAX_ALPHA = 0.45
 
 /** 上浮周期下限，毫秒（计划 §3；见 [DefaultBackgroundSpec] 的说明）。 */
 const val MIN_RISE_MILLIS = 15_000
@@ -164,9 +186,12 @@ private val RISE_PHASE_OFFSETS = listOf(0.0, 0.42, 0.71, 0.17)
  * 呼吸：透明度在峰值的 [BREATH_FLOOR] ~ 1 倍之间摆动，周期是上浮周期的 3 倍（同参照实现）。
  *
  * 下限刻意**不是 0**：参照实现的呼吸会降到 0（光斑完全消失再出现），在深色底上像闪烁的
- * 光点，在浅色底上会变成「一块雾忽然出现又消失」。留 35% 的底，光斑始终隐约在场。
+ * 光点，在浅色底上会变成「一块雾忽然出现又消失」。留底的另一个原因与浓度有关 ——
+ * 峰值透明度提高到 0.36 之后，若下限仍取 0.35，光斑会在 0.13~0.36 之间起伏，
+ * **恰好反复扫过「背景与未选中的牌同亮度」那一带**（约 0.13 处），于是牌的边界会周期性
+ * 发糊。取 0.6 让这个起伏远离那一带（0.22 ~ 0.36）。
  */
-private const val BREATH_FLOOR = 0.35
+private const val BREATH_FLOOR = 0.6
 private const val BREATH_CYCLES = 3.0
 
 /** 每个光斑的横向摆动幅度（相对屏宽）与摆动圈数。 */
@@ -341,12 +366,8 @@ fun AnimatedBackground(modifier: Modifier = Modifier) {
             val centerY = size.height * (RISE_START - RISE_TRAVEL * phase)
             val center = Offset(centerX.toFloat(), centerY.toFloat())
 
-            // 呼吸：透明度在峰值的 35%~100% 之间摆动（见 BREATH_FLOOR）。
-            // ⚠️ 诊断期把透明度放大 3 倍（见 BackgroundDiagnostic.kt），确诊后删除。
-            val alpha = (
-                backgroundOrbPeakAlpha(spec, index) * backgroundOrbBreath(phase) *
-                    (if (BACKGROUND_DIAGNOSTIC) 3.0 else 1.0)
-                ).toFloat()
+            // 呼吸：透明度在峰值的 60%~100% 之间摆动（见 BREATH_FLOOR）。
+            val alpha = (backgroundOrbPeakAlpha(spec, index) * backgroundOrbBreath(phase)).toFloat()
             val color = orbColors[index.mod(orbColors.size)]
 
             // 圆心与半径同时交给画笔和 drawCircle —— 两者必须一致，否则渐变会偏离光斑。
@@ -368,32 +389,6 @@ fun AnimatedBackground(modifier: Modifier = Modifier) {
                 ),
                 radius = radius,
                 center = center,
-            )
-
-            // ⚠️ 临时诊断（见 BackgroundDiagnostic.kt）：把光斑的圆心与半径用洋红细圈描出来，
-            // 这样「位置公式算出来的圈」与「实际渲染出来的雾」可以分开判断。确诊后删除。
-            if (BACKGROUND_DIAGNOSTIC) {
-                drawCircle(
-                    color = DiagnosticMagenta,
-                    radius = radius,
-                    center = center,
-                    style = Stroke(width = 6f),
-                )
-            }
-        }
-
-        // ⚠️ 临时诊断：证明「这一层真的在画」以及画布的确切位置。确诊后删除。
-        if (BACKGROUND_DIAGNOSTIC) {
-            drawRect(
-                color = DiagnosticMagenta,
-                topLeft = Offset.Zero,
-                size = Size(130f, 130f),
-            )
-            drawRect(
-                color = DiagnosticMagenta,
-                topLeft = Offset(5f, 5f),
-                size = Size((size.width - 10f).coerceAtLeast(0f), (size.height - 10f).coerceAtLeast(0f)),
-                style = Stroke(width = 10f),
             )
         }
     }
