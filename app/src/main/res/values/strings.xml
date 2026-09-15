@@ -68,4 +68,15 @@
     <string name="msg_no_hint_left">提示次数已用完</string>
     <string name="msg_no_shuffle_left">洗牌次数已用完</string>
     <string name="msg_auto_shuffled">已自动重排</string>
+
+    <!--
+      关于界面（SRS FR-15 / V1.6）。
+      menu_about 同时用作设置界面的入口文字与关于页的标题，与 menu_settings 的既有用法一致。
+    -->
+    <string name="menu_about">关于</string>
+    <!-- %1$s 为版本文字，如「1.6（构建 12）」；由 aboutVersionLabel 生成，见 ui/about/AboutInfo.kt -->
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_description">经典连连看：两张同图案的牌，用不超过 2 个拐点的折线相连即可消除。</string>
+    <!-- 版权行：年份写死为发布年份（作品集要的是「发布年份」，且同一份 APK 任何时候显示应一致） -->
+    <string name="about_copyright">© 2026 leid</string>
 </resources>

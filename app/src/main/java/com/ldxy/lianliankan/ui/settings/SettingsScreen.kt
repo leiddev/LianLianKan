@@ -60,6 +60,7 @@ import com.ldxy.lianliankan.ui.theme.TileSkins
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
+    onAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -149,6 +150,20 @@ fun SettingsScreen(
                     text = stringResource(R.string.settings_clear_progress),
                     color = MaterialTheme.colorScheme.error,
                 )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            // 「关于」入口（V1.6 / SRS FR-15.4）。
+            // 放在设置页最底部，与「清除进度」并列 —— 方案 Q1 = A：主菜单按钮数不变
+            // （既有验收观感不受影响），入口位置唯一（不存在两个维护点）。
+            // 样式沿用本页既有的 TextButton（项目没有引入 Material 图标依赖，
+            // 因此不做「带尾部箭头的一行」那种写法）。
+            TextButton(
+                onClick = onAbout,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(R.string.menu_about))
             }
         }
     }

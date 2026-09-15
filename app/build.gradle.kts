@@ -1,4 +1,4 @@
-﻿import java.util.Properties
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -33,8 +33,8 @@ android {
         applicationId = "com.ldxy.lianliankan"
         minSdk = 24
         targetSdk = 37
-        versionCode = 11
-        versionName = "1.5"
+        versionCode = 12
+        versionName = "1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -68,6 +68,13 @@ android {
     }
     buildFeatures {
         compose = true
+
+        // V1.6（关于界面）：把版本号暴露给代码。
+        //
+        // 版本号的**唯一真源**是本文件的 versionName / versionCode，而 BuildConfig 正是它的
+        // 投影，因此关于界面读 BuildConfig 而不是自己写一份（否则改版本号时必然漏改一处）。
+        // 打开后 `BuildConfig.VERSION_NAME` / `VERSION_CODE` 是编译期常量，纯 JVM 单测可直接断言。
+        buildConfig = true
     }
 }
 

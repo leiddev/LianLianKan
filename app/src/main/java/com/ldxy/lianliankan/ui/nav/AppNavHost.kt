@@ -23,6 +23,8 @@ import com.ldxy.lianliankan.domain.model.Settings
 import com.ldxy.lianliankan.feedback.AndroidSoundPlayer
 import com.ldxy.lianliankan.feedback.AndroidVibratorPlayer
 import com.ldxy.lianliankan.feedback.FeedbackDispatcher
+import com.ldxy.lianliankan.ui.about.AboutScreen
+import com.ldxy.lianliankan.ui.about.appInfoFromBuild
 import com.ldxy.lianliankan.ui.game.GameScreen
 import com.ldxy.lianliankan.ui.game.GameViewModel
 import com.ldxy.lianliankan.ui.level.LevelSelectScreen
@@ -32,11 +34,12 @@ import com.ldxy.lianliankan.ui.menu.MenuViewModel
 import com.ldxy.lianliankan.ui.settings.SettingsScreen
 import com.ldxy.lianliankan.ui.settings.SettingsViewModel
 
-/** 路由表（SRS 5.1 的界面清单：主菜单 / 关卡选择 / 游戏 / 设置）。 */
+/** 路由表（SRS 5.1 的界面清单：主菜单 / 关卡选择 / 游戏 / 设置 / 关于）。 */
 object Route {
     const val MENU = "menu"
     const val LEVELS = "levels"
     const val SETTINGS = "settings"
+    const val ABOUT = "about"
     const val GAME = "game"
     const val ARG_LEVEL = "level"
 
@@ -113,6 +116,16 @@ fun AppNavHost(
             )
             SettingsScreen(
                 viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onAbout = { navController.navigate(Route.ABOUT) },
+            )
+        }
+
+        // 关于界面（V1.6 / SRS FR-15）。版本信息从构建产物取一次即可 ——
+        // BuildConfig 是编译期常量，remember 只是为了不在每次重组时重建这个数据类。
+        composable(Route.ABOUT) {
+            AboutScreen(
+                info = remember { appInfoFromBuild() },
                 onBack = { navController.popBackStack() },
             )
         }
