@@ -33,7 +33,7 @@ android {
         applicationId = "com.ldxy.lianliankan"
         minSdk = 24
         targetSdk = 37
-        versionCode = 8
+        versionCode = 9
         versionName = "1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

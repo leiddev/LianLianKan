@@ -15,8 +15,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -340,7 +342,11 @@ fun AnimatedBackground(modifier: Modifier = Modifier) {
             val center = Offset(centerX.toFloat(), centerY.toFloat())
 
             // 呼吸：透明度在峰值的 35%~100% 之间摆动（见 BREATH_FLOOR）。
-            val alpha = (backgroundOrbPeakAlpha(spec, index) * backgroundOrbBreath(phase)).toFloat()
+            // ⚠️ 诊断期把透明度放大 3 倍（见 BackgroundDiagnostic.kt），确诊后删除。
+            val alpha = (
+                backgroundOrbPeakAlpha(spec, index) * backgroundOrbBreath(phase) *
+                    (if (BACKGROUND_DIAGNOSTIC) 3.0 else 1.0)
+                ).toFloat()
             val color = orbColors[index.mod(orbColors.size)]
 
             // 圆心与半径同时交给画笔和 drawCircle —— 两者必须一致，否则渐变会偏离光斑。
@@ -362,6 +368,32 @@ fun AnimatedBackground(modifier: Modifier = Modifier) {
                 ),
                 radius = radius,
                 center = center,
+            )
+
+            // ⚠️ 临时诊断（见 BackgroundDiagnostic.kt）：把光斑的圆心与半径用洋红细圈描出来，
+            // 这样「位置公式算出来的圈」与「实际渲染出来的雾」可以分开判断。确诊后删除。
+            if (BACKGROUND_DIAGNOSTIC) {
+                drawCircle(
+                    color = DiagnosticMagenta,
+                    radius = radius,
+                    center = center,
+                    style = Stroke(width = 6f),
+                )
+            }
+        }
+
+        // ⚠️ 临时诊断：证明「这一层真的在画」以及画布的确切位置。确诊后删除。
+        if (BACKGROUND_DIAGNOSTIC) {
+            drawRect(
+                color = DiagnosticMagenta,
+                topLeft = Offset.Zero,
+                size = Size(130f, 130f),
+            )
+            drawRect(
+                color = DiagnosticMagenta,
+                topLeft = Offset(5f, 5f),
+                size = Size((size.width - 10f).coerceAtLeast(0f), (size.height - 10f).coerceAtLeast(0f)),
+                style = Stroke(width = 10f),
             )
         }
     }
