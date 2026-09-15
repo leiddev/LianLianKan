@@ -67,6 +67,11 @@ fun SettingsScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        // 不铺自己的底色（V1.5 修订 1）：[Scaffold] 的默认 containerColor 是
+        // colorScheme.background，那是一个**不透明**的满屏 Surface —— 会把 APP 级的
+        // 动态背景整层盖掉（这一屏因此完全看不到背景动画）。给透明色即让出这一层，
+        // 与主菜单、游戏界面（两者本来就没有 Scaffold）保持一致。
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.menu_settings)) },
