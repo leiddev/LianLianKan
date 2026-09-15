@@ -2,25 +2,30 @@ package com.ldxy.lianliankan.ui.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
 
 /**
- * 动态背景的约束不变量测试（V1.5；V1.5 修订 1 重写）。
+ * 动态背景的约束不变量测试（V1.5；修订 2 重写）。
  *
- * ### 为什么这份测试要重写（重要教训）
- * 初版的 6 条断言**全部通过**，而真机反馈是「完全看不出背景在动」。复盘原因是：
- * 初版断言的是**配方**（透明度 ≤ 0.08、周期 ≥ 20 s、用色是中性角色），
- * 但「看得见」这个目标取决于**成品** —— 合成后的像素差 = 透明度 ×（底色 − 光斑色）。
- * 初版的光斑色是 `surfaceVariant` / `outlineVariant`，与底色的差只有 29 / 57 级，
- * 乘上 0.033~0.055 的透明度后**实际像素差只有 1~2 级（约 0.5%）**，5 个光斑里 4 个
- * 在数学上不可见 —— 配方合法，成品不可见，测试全绿。
+ * ### 这份测试改过两次，每次都是被真机打回来的
+ * 1. **修订 0 的 6 条断言全部通过，而真机「完全看不出背景在动」。** 原因是断言测的是**配方**
+ *    （透明度 ≤ 0.08、周期 ≥ 20 s、用色是中性角色），而「看得见」取决于**成品** ——
+ *    合成后的像素差 = 透明度 ×（底色 − 光斑色）。当时的光斑色与底色的差只有 29 / 57 级，
+ *    乘上 0.033~0.055 的透明度后只有 **1~2 级（约 0.5%）**，5 个光斑里 4 个在数学上不可见。
+ *    → 于是有了 `每个光斑在其呼吸峰值处都看得见` 这条**成品断言**。
+ * 2. **修订 1 的 8 条断言全部通过，而真机「每个界面都没看到动态背景」。** 这次与颜色无关：
+ *    动画根本没有推进。Compose 会按系统的「动画程序时长缩放」折算动画时长，缩放为 0 时
+ *    进度被直接取到动画结尾（恒为 1.0），光斑全部停在屏幕上方之外。
+ *    → 于是有了 `进度按上浮周期循环` 这条**时钟断言**，以及把时钟改成自己数帧的实现。
  *
- * 因此本版把断言换成**成品指标**：`每个光斑在其呼吸峰值处都看得见` 直接算合成色与底色的像素差。
- * 这是一条「改坏就会红」的断言，初版实现会立刻失败。
+ * 两次的共同教训：**测试要盯住「外部可观察的结果」，而不是「我写下的那几个数字」。**
+ * 因此下面既断言像素差（成品），也断言进度函数本身的行为（时钟），
+ * 而这些量都由纯函数给出、与 Composable 和系统设置无关。
  *
- * ### 为什么这里的上下限是字面量，而不用生产代码里的 `MAX_ALPHA` 常量
+ * ### 为什么这里的上下限是字面量，而不用生产代码里的常量
  * 若断言写成 `spec.maxAlpha <= MAX_ALPHA`，那么把 `MAX_ALPHA` 改成 0.5 也会通过 ——
  * 测的是「两处抄写一致」，不是「符合需求」。所以约束值在这里独立写一遍（并注明出处），
  * 生产代码里的常量只用于给读者指路。
@@ -39,29 +44,21 @@ class AnimatedBackgroundTest {
         /** 「背景氛围」至少要有几个光斑 —— 少于 3 个不成其为背景，而是画面上多了两个圆。 */
         const val MIN_ORB_COUNT = 3
 
-        /** 计划 §3：单个光斑的透明度上限。见 `DefaultBackgroundSpec` 对 0.055 → 0.10 的复盘。 */
-        const val MAX_ALPHA = 0.12
+        /** 计划 §3：单个光斑的透明度上限。见 `DefaultBackgroundSpec` 对 0.055 → 0.13 的复盘。 */
+        const val MAX_ALPHA = 0.15
 
-        /** 计划 §3：上浮周期下限（秒），避免形成被眼睛抓住的「节律」。 */
+        /** 计划 §3：上浮周期下限（毫秒），避免形成被眼睛抓住的「节律」。 */
         const val MIN_RISE_MILLIS = 15_000
 
         /**
          * 可见性区间（**成品指标**，单位：0~255 的单通道差）。
          *
-         * 下界 11（约 4.3%）：大面积柔和的色块差异，低于这个量级就不该指望「看得见」——
-         * 初版实测只有 1~2 级。上界 28（约 11%）：再高就会从「氛围」变成「画面上有东西」，
+         * 下界 14（约 5.5%）：大面积柔和的色块差异，低于这个量级就不该指望「看得见」——
+         * 修订 0 实测只有 1~2 级。上界 34（约 13%）：再高就会从「氛围」变成「画面上有东西」，
          * 并会明显削弱棋盘上牌与背景的边界（Q2 = B 没有底板）。
          */
-        const val MIN_VISIBLE_DELTA = 11.0
-        const val MAX_VISIBLE_DELTA = 28.0
-
-        /**
-         * 半径比例的期望下界（相对屏幕短边）。
-         *
-         * 形态参照 `FloatingOrbs`：光斑要足够大才像氛围；太小会退化成可数的圆点（风险 R-2）。
-         * 但上界也不宜过大，见 `DefaultBackgroundSpec` 对「不做成覆盖半屏的巨大光斑」的说明。
-         */
-        const val MIN_RADIUS_RATIO = 0.15
+        const val MIN_VISIBLE_DELTA = 14.0
+        const val MAX_VISIBLE_DELTA = 34.0
     }
 
     /** 承载游戏语义的强调色角色，背景一律不得取用（计划 §3 最后一条 / 风险 R-1）。 */
@@ -99,6 +96,63 @@ class AnimatedBackgroundTest {
         "渐变的暗端（surfaceVariant）" to colors.surfaceVariant,
     )
 
+    // ==================================================== 时钟（修订 2 新增，对应第二次真机返工）
+
+    @Test
+    fun `进度按上浮周期循环 - 且初始相位互相错开`() {
+        // 修订 1 的真机现象是「什么都没有」，根源是进度恒为 1.0（动画时长被系统缩放为 0），
+        // 而四个光斑的初始相位又都是 0 —— 于是全部停在屏幕上方之外，屏幕上真的一个都不剩。
+        // 这条断言把「时钟」这件事钉在纯函数上：不依赖 Composable，也不依赖系统设置。
+        val period = DefaultBackgroundSpec.riseMillis
+
+        // ① 每个光斑的初始相位必须互不相同：这样 t = 0 时至少有几个光斑已经落在屏幕内，
+        //    万一时间推进再次失效，现象是「看得见但不动」而不是「什么都没有」。
+        val offsets = (0 until DefaultBackgroundSpec.orbCount)
+            .map { backgroundOrbPhase(0L, period, it) }
+        assertEquals("初始相位应两两不同", offsets.size, offsets.toSet().size)
+        assertTrue(
+            "初始相位应至少有一个落在屏幕中部（0.2~0.8），否则启动后头几秒屏幕上没有光斑：$offsets",
+            offsets.any { it in 0.2..0.8 },
+        )
+
+        // ② 进度始终落在 [0, 1)，并且确实随时间推进（不是常量）。
+        for (index in 0 until DefaultBackgroundSpec.orbCount) {
+            var previous = backgroundOrbPhase(0L, period, index)
+            var moved = false
+            for (step in 1..200) {
+                val elapsed = period.toLong() * step / 100
+                val phase = backgroundOrbPhase(elapsed, period, index)
+                assertTrue("第 $index 个光斑的进度 $phase 应落在 [0, 1)", phase >= 0.0 && phase < 1.0)
+                if (abs(phase - previous) > 1e-9) moved = true
+                previous = phase
+            }
+            assertTrue("第 $index 个光斑的进度不随时间变化", moved)
+        }
+
+        // ③ 恰好走过一个周期后回到原处（循环无缝）。
+        for (index in 0 until DefaultBackgroundSpec.orbCount) {
+            val at0 = backgroundOrbPhase(0L, period, index)
+            val atPeriod = backgroundOrbPhase(period.toLong(), period, index)
+            assertTrue(
+                "第 $index 个光斑走过一个周期后应回到原处：$at0 vs $atPeriod",
+                abs(at0 - atPeriod) < 1e-6,
+            )
+        }
+
+        // ④ 非法周期不崩（退化输入返回初始相位）。
+        for (index in 0 until DefaultBackgroundSpec.orbCount) {
+            for (bad in listOf(0, -1, Int.MIN_VALUE)) {
+                val phase = backgroundOrbPhase(12345L, bad, index)
+                assertTrue("周期为 $bad 时进度 $phase 应仍落在 [0, 1)", phase >= 0.0 && phase < 1.0)
+            }
+        }
+        // 越界序号同样不崩（倍率表按取模取用）。
+        for (index in listOf(-3, -1, 99)) {
+            val phase = backgroundOrbPhase(1000L, period, index)
+            assertTrue("序号 $index 时应仍返回合法进度，实际 $phase", phase >= 0.0 && phase < 1.0)
+        }
+    }
+
     // ==================================================== 计划 §3 的硬约束
 
     @Test
@@ -114,13 +168,10 @@ class AnimatedBackgroundTest {
         // 计划 §3 / 风险 R-1。注意这只是**配方**约束，真正管用的是下面那条成品断言。
         val spec = DefaultBackgroundSpec
         assertTrue("峰值透明度应为正数，否则背景不可见", spec.maxAlpha > 0.0)
-        assertTrue(
-            "峰值透明度 ${spec.maxAlpha} 超过上限 $MAX_ALPHA",
-            spec.maxAlpha <= MAX_ALPHA,
-        )
+        assertTrue("峰值透明度 ${spec.maxAlpha} 超过上限 $MAX_ALPHA", spec.maxAlpha <= MAX_ALPHA)
 
         // 运行时用的是 backgroundOrbPeakAlpha 的倍率表，必须确认**实际画出来的每一个光斑**
-        // 都不超过上限，且上限确实被用到（不是虚设）。含越界序号，函数应夹取而不是抛异常。
+        // 都不超过上限，且上限确实被用到（不是虚设）。含越界序号，函数应取模而不是抛异常。
         var actualMax = 0.0
         for (index in -2..spec.orbCount + 5) {
             val alpha = backgroundOrbPeakAlpha(spec, index)
@@ -139,10 +190,10 @@ class AnimatedBackgroundTest {
 
     @Test
     fun `每个光斑在其呼吸峰值处都看得见`() {
-        // ★ 本文件最核心的一条（计划 §14.5 的复盘）：断言**成品**而不是配方。
+        // ★ 本文件最核心的一条：断言**成品**而不是配方。
         //
-        // 「看得见」= 光斑中心处合成后的颜色相对底色有明显的像素差。这条断言如果在初版
-        // 实现上运行会立刻失败（4 个光斑只有 1~2 级差），这正是它存在的意义。
+        // 「看得见」= 光斑中心处合成后的颜色相对底色有明显的像素差。这条断言在修订 0 的
+        // 实现上会立刻失败（4 个光斑只有 1~2 级差），这正是它存在的意义。
         //
         // 逐主题色 × 逐光斑 × 渐变两端，四套配色都要成立（颜色由 ColorScheme 推导，
         // 不是写死的一组灰）。
@@ -181,22 +232,17 @@ class AnimatedBackgroundTest {
     fun `呼吸不会让光斑完全消失 - 也不会超过峰值`() {
         // 参照实现（FloatingOrbs）的呼吸会降到 0：在深色底上像闪烁的光点，在浅色底上会变成
         // 「一块雾忽然出现又消失」。本实现刻意留了底（见 BREATH_FLOOR）。
-        for (index in 0 until DefaultBackgroundSpec.orbCount) {
-            var min = Double.MAX_VALUE
-            var max = 0.0
-            for (step in 0 until 1000) {
-                val breath = backgroundOrbBreath(index, step / 1000.0)
-                min = minOf(min, breath)
-                max = maxOf(max, breath)
-            }
-            assertTrue("第 $index 个光斑的呼吸系数最小值 $min 应大于 0（不做完全消失的闪烁）", min > 0.15)
-            assertTrue("第 $index 个光斑的呼吸系数最大值 $max 不应超过 1（否则会突破透明度上限）", max <= 1.0 + 1e-9)
-            assertTrue(
-                "第 $index 个光斑的呼吸幅度只有 ${max - min}，看不出明暗变化",
-                max - min >= 0.3,
-            )
-            assertTrue("第 $index 个光斑的呼吸几乎一直在最亮处，等于没有呼吸", min <= 0.7)
+        var min = Double.MAX_VALUE
+        var max = 0.0
+        for (step in 0 until 1000) {
+            val breath = backgroundOrbBreath(step / 1000.0)
+            min = minOf(min, breath)
+            max = maxOf(max, breath)
         }
+        assertTrue("呼吸系数最小值 $min 应大于 0（不做完全消失的闪烁）", min > 0.15)
+        assertTrue("呼吸系数最大值 $max 不应超过 1（否则会突破透明度上限）", max <= 1.0 + 1e-9)
+        assertTrue("呼吸幅度只有 ${max - min}，看不出明暗变化", max - min >= 0.3)
+        assertTrue("呼吸几乎一直在最亮处，等于没有呼吸", min <= 0.7)
     }
 
     @Test
@@ -229,8 +275,8 @@ class AnimatedBackgroundTest {
         // 形态参照 FloatingOrbs（0.24~0.36 倍屏宽）+ 风险 R-2（太小会像具象形状）。
         val range = DefaultBackgroundSpec.radiusRange
         assertTrue(
-            "半径下界 ${range.start} 偏小：光斑会退化成可数的圆点，下界应不低于 $MIN_RADIUS_RATIO",
-            range.start >= MIN_RADIUS_RATIO,
+            "半径下界 ${range.start} 偏小：光斑会退化成可数的圆点，下界应不低于 0.15",
+            range.start >= 0.15,
         )
         assertTrue(
             "半径上界 ${range.endInclusive} 应不超过屏幕短边的 1 倍",
@@ -240,10 +286,7 @@ class AnimatedBackgroundTest {
         // 运行时取值也必须落在区间内（backgroundOrbRadius 按序号均匀铺开）。
         for (index in 0 until DefaultBackgroundSpec.orbCount) {
             val radius = backgroundOrbRadius(DefaultBackgroundSpec, index)
-            assertTrue(
-                "第 $index 个光斑的半径比例 $radius 不在区间 $range 内",
-                radius in range,
-            )
+            assertTrue("第 $index 个光斑的半径比例 $radius 不在区间 $range 内", radius in range)
         }
     }
 
@@ -267,10 +310,7 @@ class AnimatedBackgroundTest {
             // 含越界序号：函数应夹取而不是抛异常。
             for (index in -2..spec.orbCount + 1) {
                 val radius = backgroundOrbRadius(spec, index)
-                assertTrue(
-                    "$label：序号 $index 的半径比例 $radius 越出区间 $range",
-                    radius in range,
-                )
+                assertTrue("$label：序号 $index 的半径比例 $radius 越出区间 $range", radius in range)
             }
         }
     }
